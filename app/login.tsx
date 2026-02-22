@@ -11,13 +11,13 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Leaf, Chrome, Apple } from 'lucide-react-native';
+import { Leaf, Chrome } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { signInWithGoogle, signInWithApple, isAuthenticating } = useAuth();
+  const { signInWithGoogle, isAuthenticating } = useAuth();
   const logoScale = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(0)).current;
 
@@ -46,14 +46,6 @@ export default function LoginScreen() {
     }
   }, [signInWithGoogle]);
 
-  const handleApple = useCallback(async () => {
-    try {
-      await signInWithApple();
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Something went wrong';
-      Alert.alert('Sign In Failed', msg);
-    }
-  }, [signInWithApple]);
 
   return (
     <View style={styles.container}>
@@ -103,23 +95,6 @@ export default function LoginScreen() {
               <>
                 <Chrome size={20} color={Colors.text} strokeWidth={1.6} />
                 <Text style={styles.googleButtonText}>Continue with Google</Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.appleButton}
-            onPress={handleApple}
-            disabled={isAuthenticating}
-            activeOpacity={0.8}
-            testID="apple-sign-in"
-          >
-            {isAuthenticating ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Apple size={20} color="#fff" strokeWidth={1.6} />
-                <Text style={styles.appleButtonText}>Continue with Apple</Text>
               </>
             )}
           </TouchableOpacity>
@@ -233,31 +208,7 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: Colors.text,
   },
-  appleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1C1C1E',
-    height: 54,
-    borderRadius: 14,
-    gap: 10,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  appleButtonText: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#fff',
-  },
+
   termsText: {
     fontSize: 12,
     color: Colors.textSecondary,
