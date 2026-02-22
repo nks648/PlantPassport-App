@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Animated, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
-import { Feather, Send, X } from 'lucide-react-native';
+import { Send, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { usePlants } from '@/providers/PlantProvider';
