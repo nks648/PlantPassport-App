@@ -11,13 +11,13 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Leaf, Chrome } from 'lucide-react-native';
+import { Leaf, Sprout, Droplets, Users, ArrowRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { signInWithGoogle, isAuthenticating } = useAuth();
+  const { signInAnonymously, isAuthenticating } = useAuth();
   const logoScale = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(0)).current;
 
@@ -37,15 +37,14 @@ export default function LoginScreen() {
     ]).start();
   }, [logoScale, contentOpacity]);
 
-  const handleGoogle = useCallback(async () => {
+  const handleGetStarted = useCallback(async () => {
     try {
-      await signInWithGoogle();
+      await signInAnonymously();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Something went wrong';
       Alert.alert('Sign In Failed', msg);
     }
-  }, [signInWithGoogle]);
-
+  }, [signInAnonymously]);
 
   return (
     <View style={styles.container}>
@@ -68,40 +67,46 @@ export default function LoginScreen() {
           { paddingBottom: insets.bottom + 32, opacity: contentOpacity },
         ]}
       >
-        <View style={styles.featureRow}>
-          <View style={styles.featureDot} />
-          <Text style={styles.featureText}>Identify plants with AI</Text>
-        </View>
-        <View style={styles.featureRow}>
-          <View style={styles.featureDot} />
-          <Text style={styles.featureText}>Track watering & care streaks</Text>
-        </View>
-        <View style={styles.featureRow}>
-          <View style={styles.featureDot} />
-          <Text style={styles.featureText}>Join the plant community</Text>
-        </View>
-
-        <View style={styles.buttonGroup}>
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogle}
-            disabled={isAuthenticating}
-            activeOpacity={0.8}
-            testID="google-sign-in"
-          >
-            {isAuthenticating ? (
-              <ActivityIndicator size="small" color={Colors.text} />
-            ) : (
-              <>
-                <Chrome size={20} color={Colors.text} strokeWidth={1.6} />
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
-              </>
-            )}
-          </TouchableOpacity>
+        <View style={styles.features}>
+          <View style={styles.featureRow}>
+            <View style={styles.featureIconWrap}>
+              <Sprout size={18} color={Colors.primary} strokeWidth={2} />
+            </View>
+            <Text style={styles.featureText}>Identify plants with AI</Text>
+          </View>
+          <View style={styles.featureRow}>
+            <View style={styles.featureIconWrap}>
+              <Droplets size={18} color={Colors.primary} strokeWidth={2} />
+            </View>
+            <Text style={styles.featureText}>Track watering & care streaks</Text>
+          </View>
+          <View style={styles.featureRow}>
+            <View style={styles.featureIconWrap}>
+              <Users size={18} color={Colors.primary} strokeWidth={2} />
+            </View>
+            <Text style={styles.featureText}>Join the plant community</Text>
+          </View>
         </View>
 
-        <Text style={styles.termsText}>
-          By continuing, you agree to our Terms of Service and Privacy Policy
+        <TouchableOpacity
+          style={styles.getStartedButton}
+          onPress={handleGetStarted}
+          disabled={isAuthenticating}
+          activeOpacity={0.8}
+          testID="get-started-button"
+        >
+          {isAuthenticating ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Text style={styles.getStartedText}>Get Started</Text>
+              <ArrowRight size={20} color="#fff" strokeWidth={2.2} />
+            </>
+          )}
+        </TouchableOpacity>
+
+        <Text style={styles.privacyText}>
+          No account needed. Your data stays private and anonymous.
         </Text>
       </Animated.View>
     </View>
@@ -159,17 +164,22 @@ const styles = StyleSheet.create({
   bottomSection: {
     paddingHorizontal: 24,
   },
+  features: {
+    marginBottom: 32,
+    gap: 14,
+  },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
     paddingHorizontal: 8,
   },
-  featureDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.primary,
+  featureIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: `${Colors.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   featureText: {
@@ -177,43 +187,37 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontWeight: '500' as const,
   },
-  buttonGroup: {
-    marginTop: 28,
-    gap: 12,
-  },
-  googleButton: {
+  getStartedButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    height: 54,
-    borderRadius: 14,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(60, 60, 67, 0.12)',
+    backgroundColor: Colors.primary,
+    height: 56,
+    borderRadius: 16,
+    gap: 8,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
       },
       android: {
-        elevation: 2,
+        elevation: 8,
       },
     }),
   },
-  googleButtonText: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: Colors.text,
+  getStartedText: {
+    fontSize: 17,
+    fontWeight: '700' as const,
+    color: '#fff',
+    letterSpacing: -0.2,
   },
-
-  termsText: {
-    fontSize: 12,
+  privacyText: {
+    fontSize: 13,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginTop: 20,
+    marginTop: 16,
     lineHeight: 18,
     paddingHorizontal: 16,
   },
