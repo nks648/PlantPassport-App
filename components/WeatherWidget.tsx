@@ -60,24 +60,24 @@ const US_COUNTRY_CODES = ['us', 'usa', 'united states', 'united states of americ
 const IMPERIAL_COUNTRIES = ['us', 'usa', 'united states', 'united states of america', 'mm', 'myanmar', 'lr', 'liberia', 'bs', 'bahamas', 'ky', 'cayman islands', 'pw', 'palau', 'mh', 'marshall islands'];
 
 function shouldUseCelsius(countryCode?: string): boolean {
-  if (!countryCode) return false;
+  if (!countryCode) return true;
   return !IMPERIAL_COUNTRIES.includes(countryCode.toLowerCase());
 }
 
 function getFallbackWeather(): WeatherData {
   return {
-    temp: 72,
+    temp: 22,
     humidity: 55,
     description: 'Partly Cloudy',
     city: 'Your Area',
-    windSpeed: 8,
-    useCelsius: false,
+    windSpeed: 13,
+    useCelsius: true,
     forecast: [
-      { day: 'Mon', high: 78, low: 62, condition: 'sunny' },
-      { day: 'Tue', high: 82, low: 65, condition: 'partly_cloudy' },
-      { day: 'Wed', high: 85, low: 68, condition: 'sunny' },
-      { day: 'Thu', high: 80, low: 64, condition: 'cloudy' },
-      { day: 'Fri', high: 76, low: 60, condition: 'rain' },
+      { day: 'Mon', high: 26, low: 17, condition: 'sunny' },
+      { day: 'Tue', high: 28, low: 18, condition: 'partly_cloudy' },
+      { day: 'Wed', high: 29, low: 20, condition: 'sunny' },
+      { day: 'Thu', high: 27, low: 18, condition: 'cloudy' },
+      { day: 'Fri', high: 24, low: 16, condition: 'rain' },
     ],
   };
 }
