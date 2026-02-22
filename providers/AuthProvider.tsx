@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import { Session } from '@supabase/supabase-js';
 import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { makeRedirectUri } from 'expo-auth-session';
 import createContextHook from '@nkzw/create-context-hook';
 import { supabase, SUPABASE_URL } from '@/lib/supabase';
@@ -48,24 +49,35 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
         const { error } = await supabase.auth.signInWithOAuth({
           provider,
           options: {
-            redirectTo: window.location.origin,
+            redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
           },
         });
         if (error) throw error;
         return;
       }
 
-      const redirectUrl = makeRedirectUri({ scheme: 'rork-app', path: 'auth/callback' });
+      const redirectUrl = Linking.createURL('auth/callback');
       console.log('[Auth] Redirect URL:', redirectUrl);
 
-      const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(redirectUrl)}`;
-      console.log('[Auth] Opening auth URL for provider:', provider);
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
+        },
+      });
 
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+      if (error) throw error;
+      if (!data?.url) throw new Error('No auth URL returned');
+
+      console.log('[Auth] Opening auth URL for provider:', provider);
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
       console.log('[Auth] Auth result type:', result.type);
 
       if (result.type === 'success' && result.url) {
         const url = result.url;
+        console.log('[Auth] Callback URL:', url);
+
         let paramsString = '';
         if (url.includes('#')) {
           paramsString = url.split('#')[1];
@@ -80,16 +92,31 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
         console.log('[Auth] Got tokens:', { access_token: !!access_token, refresh_token: !!refresh_token });
 
         if (access_token && refresh_token) {
-          const { error } = await supabase.auth.setSession({
+          const { error: sessionError } = await supabase.auth.setSession({
             access_token,
             refresh_token,
           });
-          if (error) {
-            console.error('[Auth] Set session error:', error.message);
-            throw error;
+          if (sessionError) {
+            console.error('[Auth] Set session error:', sessionError.message);
+            throw sessionError;
           }
           console.log('[Auth] Session set successfully');
+        } else {
+          const code = params.get('code');
+          if (code) {
+            console.log('[Auth] Got auth code, exchanging for session');
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            if (exchangeError) {
+              console.error('[Auth] Code exchange error:', exchangeError.message);
+              throw exchangeError;
+            }
+            console.log('[Auth] Code exchange successful');
+          } else {
+            console.warn('[Auth] No tokens or code found in callback URL');
+          }
         }
+      } else {
+        console.log('[Auth] Auth session dismissed or failed:', result.type);
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
