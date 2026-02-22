@@ -7,12 +7,15 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  TextInput,
+  ScrollView,
+  Keyboard,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Camera, ImageIcon, X, ScanLine } from 'lucide-react-native';
+import { Camera, ImageIcon, X, ScanLine, Search, Leaf } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
 import Colors from '@/constants/colors';
@@ -35,12 +38,33 @@ Rules:
 - Do NOT include markdown code fences or any text outside the JSON object
 - confidence values must be between 0 and 1`;
 
+const SEARCH_PROMPT = `You are an expert botanist. The user is searching for a plant by name: "{QUERY}".
+Return a JSON array of up to 5 matching plants. Each entry should have:
+{
+  "commonName": string,
+  "scientificName": string,
+  "description": string (1-2 sentence description),
+  "imageKeyword": string (a keyword for finding images of this plant)
+}
+Rules:
+- Return STRICT JSON array only, no markdown fences or extra text
+- If no plants match, return an empty array []
+- Include common houseplants, garden plants, and tropical plants
+- Order by relevance to the search query`;
+
 interface GeminiResult {
   commonName: string | null;
   scientificName: string | null;
   confidence: number;
   notes: string;
   possibleMatches: { commonName: string; scientificName: string; confidence: number }[];
+}
+
+interface SearchResult {
+  commonName: string;
+  scientificName: string;
+  description: string;
+  imageKeyword: string;
 }
 
 async function callGeminiDirect(imageBase64: string): Promise<GeminiResult> {
@@ -57,69 +81,30 @@ async function callGeminiDirect(imageBase64: string): Promise<GeminiResult> {
 
     try {
       console.log(`[Gemini] Attempt ${attempt + 1}/${MAX_RETRIES + 1}`);
-
       const url = `${GEMINI_URL}?key=${GEMINI_API_KEY}`;
-      console.log('[Gemini] Calling URL:', url.replace(GEMINI_API_KEY, '***'));
-
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: PROMPT },
-                {
-                  inline_data: {
-                    mime_type: 'image/jpeg',
-                    data: imageBase64,
-                  },
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 1024,
-          },
+          contents: [{ parts: [{ text: PROMPT }, { inline_data: { mime_type: 'image/jpeg', data: imageBase64 } }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
         }),
       });
 
       console.log(`[Gemini] Response status: ${response.status}`);
-
       if (response.status === 429 || response.status === 503) {
-        console.log(`[Gemini] Rate limited/overloaded (${response.status})`);
         if (attempt < MAX_RETRIES) continue;
-        throw new Error(
-          response.status === 429
-            ? 'Too many scans right now. Please wait a moment and try again.'
-            : 'The identification service is busy. Please try again shortly.'
-        );
+        throw new Error(response.status === 429 ? 'Too many scans right now. Please wait a moment and try again.' : 'The identification service is busy. Please try again shortly.');
       }
 
       const rawText = await response.text();
-
-      if (rawText.startsWith('<')) {
-        console.log('[Gemini] Got HTML response instead of JSON:', rawText.substring(0, 200));
-        throw new Error('Server error. Please try again.');
-      }
-
-      if (!response.ok) {
-        console.log(`[Gemini] Error response: ${rawText.substring(0, 300)}`);
-        throw new Error(`Gemini API error ${response.status}: ${rawText.substring(0, 200)}`);
-      }
+      if (rawText.startsWith('<')) throw new Error('Server error. Please try again.');
+      if (!response.ok) throw new Error(`Gemini API error ${response.status}: ${rawText.substring(0, 200)}`);
 
       let data;
-      try {
-        data = JSON.parse(rawText);
-      } catch {
-        console.log('[Gemini] Failed to parse response as JSON:', rawText.substring(0, 200));
-        throw new Error('Server error. Please try again.');
-      }
+      try { data = JSON.parse(rawText); } catch { throw new Error('Server error. Please try again.'); }
 
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      console.log(`[Gemini] Response text length: ${text.length}`);
-
       const parsed = parseGeminiResponse(text);
 
       return {
@@ -136,34 +121,55 @@ async function callGeminiDirect(imageBase64: string): Promise<GeminiResult> {
           : [],
       };
     } catch (e: any) {
-      if (
-        attempt < MAX_RETRIES &&
-        (e?.message?.includes('429') || e?.message?.includes('503'))
-      ) {
-        continue;
-      }
+      if (attempt < MAX_RETRIES && (e?.message?.includes('429') || e?.message?.includes('503'))) continue;
       if (attempt >= MAX_RETRIES) throw e;
       throw e;
     }
   }
-
   throw new Error('Failed after all retries');
+}
+
+async function searchPlantByName(query: string): Promise<SearchResult[]> {
+  if (!GEMINI_API_KEY) throw new Error('API key not configured');
+  const url = `${GEMINI_URL}?key=${GEMINI_API_KEY}`;
+  const prompt = SEARCH_PROMPT.replace('{QUERY}', query);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
+    }),
+  });
+
+  if (!response.ok) {
+    const raw = await response.text();
+    console.log('[Search] Error:', response.status, raw.substring(0, 200));
+    throw new Error('Search failed. Please try again.');
+  }
+
+  const data = await response.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, '').trim();
+
+  try {
+    const results = JSON.parse(cleaned);
+    return Array.isArray(results) ? results.slice(0, 5) : [];
+  } catch {
+    const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+    if (jsonMatch) return JSON.parse(jsonMatch[0]).slice(0, 5);
+    return [];
+  }
 }
 
 function parseGeminiResponse(text: string) {
   let cleaned = text.trim();
-  if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, '');
-  }
+  if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, '');
   cleaned = cleaned.trim();
-
-  try {
-    return JSON.parse(cleaned);
-  } catch {
+  try { return JSON.parse(cleaned); } catch {
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
+    if (jsonMatch) return JSON.parse(jsonMatch[0]);
     throw new Error('Plant not recognized. Try better lighting or a closer photo.');
   }
 }
@@ -171,29 +177,31 @@ function parseGeminiResponse(text: string) {
 function fileToBase64Web(file: File): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error('FileReader failed to read file'));
+    reader.onerror = () => reject(new Error('FileReader failed'));
     reader.onloadend = () => {
       const result = reader.result as string;
       const parts = result.split(',');
       const base64 = parts.length > 1 ? parts[1] : parts[0];
-      const mimeType = file.type || 'image/jpeg';
-      console.log('[Scan] Web file converted to base64, length:', base64.length, 'mime:', mimeType);
-      resolve({ base64, mimeType });
+      resolve({ base64, mimeType: file.type || 'image/jpeg' });
     };
     reader.readAsDataURL(file);
   });
 }
 
+type ScanMode = 'scan' | 'search';
+
 export default function ScanScreen() {
   const router = useRouter();
+  const [mode, setMode] = useState<ScanMode>('scan');
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   const identifyMutation = useMutation({
     mutationFn: (base64: string) => callGeminiDirect(base64),
     onSuccess: (data) => {
-      console.log('[Scan] Identification success:', data.commonName);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace({
         pathname: '/scan-result' as never,
@@ -208,176 +216,128 @@ export default function ScanScreen() {
       });
     },
     onError: (error: Error) => {
-      console.log('[Scan] Identification failed:', error?.message);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Scan Failed', error?.message || 'Could not identify the plant.');
+    },
+  });
 
-      let message = error?.message || 'Could not identify the plant. Try a clearer photo.';
-
-      if (message.includes('network') || message.includes('Network') || message.includes('fetch')) {
-        message = 'No internet connection. Please check your network.';
-      }
-
-      Alert.alert('Scan Failed', message);
+  const searchMutation = useMutation({
+    mutationFn: (query: string) => searchPlantByName(query),
+    onSuccess: (data) => {
+      console.log('[Search] Found', data.length, 'results');
+      setSearchResults(data);
+    },
+    onError: (error: Error) => {
+      Alert.alert('Search Failed', error?.message || 'Could not search for plants.');
     },
   });
 
   const startIdentification = useCallback((base64Data: string) => {
-    if (!base64Data || base64Data.length < 100) {
-      Alert.alert('Error', 'Image data is too small or empty.');
-      return;
-    }
-
-    if (!GEMINI_API_KEY) {
-      Alert.alert('Error', 'Gemini API key is not configured.');
-      return;
-    }
-
-    console.log('[Scan] Starting Gemini identification, base64 length:', base64Data.length);
+    if (!base64Data || base64Data.length < 100) { Alert.alert('Error', 'Image data is too small or empty.'); return; }
+    if (!GEMINI_API_KEY) { Alert.alert('Error', 'API key is not configured.'); return; }
     identifyMutation.mutate(base64Data);
   }, [identifyMutation]);
 
   const handleWebFileSelected = useCallback(async (event: Event) => {
     const input = event.target as HTMLInputElement;
     const file = input?.files?.[0];
-    if (!file) {
-      console.log('[Scan] No file selected');
-      return;
-    }
-
-    console.log('[Scan] Web file selected:', file.name, 'size:', file.size, 'type:', file.type);
-
+    if (!file) return;
     const uri = URL.createObjectURL(file);
     setImageUri(uri);
-
     try {
       const { base64 } = await fileToBase64Web(file);
       startIdentification(base64);
-    } catch (e: any) {
-      console.log('[Scan] Error processing web file:', e);
-      Alert.alert('Error', 'Failed to process the image. Please try again.');
+    } catch {
+      Alert.alert('Error', 'Failed to process the image.');
     }
-
     input.value = '';
   }, [startIdentification]);
 
   const pickImageNative = useCallback(async (useCamera: boolean) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
       let result: ImagePicker.ImagePickerResult;
-
       if (useCamera) {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted) {
-          Alert.alert('Permission needed', 'Camera access is required to scan plants.');
-          return;
-        }
-        result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ['images'],
-          quality: 0.7,
-          base64: true,
-        });
+        if (!permission.granted) { Alert.alert('Permission needed', 'Camera access is required.'); return; }
+        result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7, base64: true });
       } else {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!permission.granted) {
-          Alert.alert('Permission needed', 'Photo library access is required.');
-          return;
-        }
-        result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          quality: 0.7,
-          base64: true,
-        });
+        if (!permission.granted) { Alert.alert('Permission needed', 'Photo library access is required.'); return; }
+        result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, base64: true });
       }
-
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        const uri = asset.uri;
-        setImageUri(uri);
-
+        setImageUri(asset.uri);
         let base64Data = asset.base64 || '';
-
         if (!base64Data) {
-          console.log('[Scan] No base64 from picker, reading file...');
-          try {
-            const FileSystem = await import('expo-file-system');
-            base64Data = await FileSystem.readAsStringAsync(uri, {
-              encoding: (FileSystem as any).EncodingType?.Base64 ?? 'base64',
-            });
-          } catch (e) {
-            console.log('[Scan] File system read failed:', e);
-            throw new Error('Failed to read image file');
-          }
+          const FileSystem = await import('expo-file-system');
+          base64Data = await FileSystem.readAsStringAsync(asset.uri, { encoding: (FileSystem as any).EncodingType?.Base64 ?? 'base64' });
         }
-
-        console.log('[Scan] Native image base64 length:', base64Data.length);
         startIdentification(base64Data);
       }
-    } catch (e: any) {
-      console.log('[Scan] Image picker error:', e);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    } catch {
+      Alert.alert('Error', 'Failed to pick image.');
     }
   }, [startIdentification]);
 
   const handleTakePhoto = useCallback(() => {
-    if (Platform.OS === 'web') {
-      if (cameraInputRef.current) {
-        cameraInputRef.current.click();
-      }
-    } else {
-      pickImageNative(true);
-    }
+    if (Platform.OS === 'web') { cameraInputRef.current?.click(); } else { pickImageNative(true); }
   }, [pickImageNative]);
 
   const handleChooseGallery = useCallback(() => {
-    if (Platform.OS === 'web') {
-      if (fileInputRef.current) {
-        fileInputRef.current.click();
-      }
-    } else {
-      pickImageNative(false);
-    }
+    if (Platform.OS === 'web') { fileInputRef.current?.click(); } else { pickImageNative(false); }
   }, [pickImageNative]);
 
-  const handleClose = useCallback(() => {
-    router.back();
-  }, [router]);
+  const handleClose = useCallback(() => { router.back(); }, [router]);
 
   const handleScanAgain = useCallback(() => {
     setImageUri(null);
     identifyMutation.reset();
   }, [identifyMutation]);
 
+  const handleSearch = useCallback(() => {
+    Keyboard.dismiss();
+    const q = searchQuery.trim();
+    if (!q) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    searchMutation.mutate(q);
+  }, [searchQuery, searchMutation]);
+
+  const handleSelectResult = useCallback((result: SearchResult) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.replace({
+      pathname: '/scan-result' as never,
+      params: {
+        name: result.commonName,
+        species: result.scientificName,
+        confidence: '90',
+        notes: result.description,
+        possibleMatches: '[]',
+        imageUri: `https://source.unsplash.com/400x400/?${encodeURIComponent(result.imageKeyword + ' plant')}`,
+      },
+    });
+  }, [router]);
+
+  const handleModeChange = useCallback((m: ScanMode) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setMode(m);
+    setSearchResults([]);
+    setSearchQuery('');
+    setImageUri(null);
+    identifyMutation.reset();
+    searchMutation.reset();
+  }, [identifyMutation, searchMutation]);
+
   const isScanning = identifyMutation.isPending;
+  const isSearching = searchMutation.isPending;
 
   const renderWebFileInputs = () => {
     if (Platform.OS !== 'web') return null;
-
     return (
       <View style={styles.hiddenInputs}>
-        <input
-          ref={(ref: HTMLInputElement | null) => {
-            if (ref) {
-              fileInputRef.current = ref;
-              ref.onchange = handleWebFileSelected as any;
-            }
-          }}
-          type="file"
-          accept="image/*"
-          style={{ display: 'none' }}
-        />
-        <input
-          ref={(ref: HTMLInputElement | null) => {
-            if (ref) {
-              cameraInputRef.current = ref;
-              ref.onchange = handleWebFileSelected as any;
-            }
-          }}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          style={{ display: 'none' }}
-        />
+        <input ref={(ref: HTMLInputElement | null) => { if (ref) { fileInputRef.current = ref; ref.onchange = handleWebFileSelected as any; } }} type="file" accept="image/*" style={{ display: 'none' }} />
+        <input ref={(ref: HTMLInputElement | null) => { if (ref) { cameraInputRef.current = ref; ref.onchange = handleWebFileSelected as any; } }} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} />
       </View>
     );
   };
@@ -389,85 +349,151 @@ export default function ScanScreen() {
           <TouchableOpacity onPress={handleClose} style={styles.closeBtn} activeOpacity={0.7}>
             <X size={20} color={Colors.text} strokeWidth={2} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Scan Plant</Text>
+          <Text style={styles.headerTitle}>Add Plant</Text>
           <View style={styles.headerSpacer} />
         </View>
 
-        {isScanning ? (
-          <View style={styles.loadingContainer}>
-            <View style={styles.scanningCard}>
-              {imageUri && (
-                <Image source={{ uri: imageUri }} style={styles.previewImage} contentFit="cover" />
-              )}
-              <View style={styles.scanOverlay}>
-                <ActivityIndicator size="large" color={Colors.primary} />
-                <Text style={styles.scanningText}>Identifying plant…</Text>
-                <Text style={styles.scanningSubtext}>Analyzing with Gemini Vision</Text>
+        <View style={styles.modeToggle}>
+          <TouchableOpacity
+            style={[styles.modeBtn, mode === 'scan' && styles.modeBtnActive]}
+            onPress={() => handleModeChange('scan')}
+            activeOpacity={0.8}
+          >
+            <Camera size={16} color={mode === 'scan' ? '#fff' : Colors.textSecondary} strokeWidth={1.8} />
+            <Text style={[styles.modeText, mode === 'scan' && styles.modeTextActive]}>Scan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeBtn, mode === 'search' && styles.modeBtnActive]}
+            onPress={() => handleModeChange('search')}
+            activeOpacity={0.8}
+          >
+            <Search size={16} color={mode === 'search' ? '#fff' : Colors.textSecondary} strokeWidth={1.8} />
+            <Text style={[styles.modeText, mode === 'search' && styles.modeTextActive]}>Search</Text>
+          </TouchableOpacity>
+        </View>
+
+        {mode === 'scan' ? (
+          <>
+            {isScanning ? (
+              <View style={styles.loadingContainer}>
+                <View style={styles.scanningCard}>
+                  {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} contentFit="cover" />}
+                  <View style={styles.scanOverlay}>
+                    <ActivityIndicator size="large" color={Colors.primary} />
+                    <Text style={styles.scanningText}>Identifying plant…</Text>
+                    <Text style={styles.scanningSubtext}>Analyzing with AI</Text>
+                  </View>
+                </View>
               </View>
-            </View>
-          </View>
-        ) : identifyMutation.isError ? (
-          <View style={styles.body}>
-            <View style={styles.illustration}>
-              {imageUri && (
-                <Image source={{ uri: imageUri }} style={styles.errorPreview} contentFit="cover" />
-              )}
-              <Text style={styles.errorTitle}>Scan Failed</Text>
-              <Text style={styles.subtitle}>
-                {identifyMutation.error?.message || 'Could not identify the plant. Try again.'}
-              </Text>
-            </View>
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={handleScanAgain}
-                activeOpacity={0.8}
-              >
-                <Camera size={22} color="#fff" strokeWidth={2} />
-                <Text style={styles.primaryButtonText}>Scan Again</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={handleClose}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.secondaryButtonText}>Go Back</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+            ) : identifyMutation.isError ? (
+              <View style={styles.body}>
+                <View style={styles.illustration}>
+                  {imageUri && <Image source={{ uri: imageUri }} style={styles.errorPreview} contentFit="cover" />}
+                  <Text style={styles.errorTitle}>Scan Failed</Text>
+                  <Text style={styles.subtitle}>{identifyMutation.error?.message || 'Could not identify. Try again.'}</Text>
+                </View>
+                <View style={styles.actions}>
+                  <TouchableOpacity style={styles.primaryButton} onPress={handleScanAgain} activeOpacity={0.8}>
+                    <Camera size={22} color="#fff" strokeWidth={2} />
+                    <Text style={styles.primaryButtonText}>Scan Again</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.body}>
+                <View style={styles.illustration}>
+                  <View style={styles.scanIconBg}>
+                    <ScanLine size={48} color={Colors.primary} strokeWidth={1.5} />
+                  </View>
+                  <Text style={styles.title}>Identify Any Plant</Text>
+                  <Text style={styles.subtitle}>Take a photo or choose from your gallery to identify a plant</Text>
+                </View>
+                <View style={styles.actions}>
+                  <TouchableOpacity style={styles.primaryButton} onPress={handleTakePhoto} activeOpacity={0.8} disabled={isScanning}>
+                    <Camera size={22} color="#fff" strokeWidth={2} />
+                    <Text style={styles.primaryButtonText}>Take Photo</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.secondaryButton} onPress={handleChooseGallery} activeOpacity={0.8} disabled={isScanning}>
+                    <ImageIcon size={20} color={Colors.text} strokeWidth={1.8} />
+                    <Text style={styles.secondaryButtonText}>Choose from Gallery</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </>
         ) : (
-          <View style={styles.body}>
-            <View style={styles.illustration}>
-              <View style={styles.scanIconBg}>
-                <ScanLine size={48} color={Colors.primary} strokeWidth={1.5} />
+          <View style={styles.searchBody}>
+            <View style={styles.searchInputRow}>
+              <View style={styles.searchInputWrap}>
+                <Search size={18} color={Colors.textSecondary} strokeWidth={1.8} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search plant name..."
+                  placeholderTextColor={Colors.textTertiary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  returnKeyType="search"
+                  onSubmitEditing={handleSearch}
+                  autoFocus
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => { setSearchQuery(''); setSearchResults([]); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <X size={16} color={Colors.textTertiary} strokeWidth={2} />
+                  </TouchableOpacity>
+                )}
               </View>
-              <Text style={styles.title}>Identify Any Plant</Text>
-              <Text style={styles.subtitle}>
-                Take a photo or choose from your gallery to instantly identify a plant and see its care needs
-              </Text>
-            </View>
-
-            <View style={styles.actions}>
               <TouchableOpacity
-                style={[styles.primaryButton, isScanning && styles.disabledButton]}
-                onPress={handleTakePhoto}
+                style={[styles.searchBtn, (!searchQuery.trim() || isSearching) && styles.searchBtnDisabled]}
+                onPress={handleSearch}
+                disabled={!searchQuery.trim() || isSearching}
                 activeOpacity={0.8}
-                disabled={isScanning}
               >
-                <Camera size={22} color="#fff" strokeWidth={2} />
-                <Text style={styles.primaryButtonText}>Take Photo</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.secondaryButton, isScanning && styles.disabledButton]}
-                onPress={handleChooseGallery}
-                activeOpacity={0.8}
-                disabled={isScanning}
-              >
-                <ImageIcon size={20} color={Colors.text} strokeWidth={1.8} />
-                <Text style={styles.secondaryButtonText}>Choose from Gallery</Text>
+                {isSearching ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.searchBtnText}>Go</Text>
+                )}
               </TouchableOpacity>
             </View>
+
+            {isSearching && searchResults.length === 0 ? (
+              <View style={styles.searchLoading}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                <Text style={styles.searchLoadingText}>Searching...</Text>
+              </View>
+            ) : searchResults.length > 0 ? (
+              <ScrollView style={styles.resultsList} contentContainerStyle={styles.resultsContent} showsVerticalScrollIndicator={false}>
+                {searchResults.map((result, i) => (
+                  <TouchableOpacity
+                    key={`${result.scientificName}-${i}`}
+                    style={styles.resultCard}
+                    onPress={() => handleSelectResult(result)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.resultIconWrap}>
+                      <Leaf size={20} color={Colors.primary} strokeWidth={1.8} />
+                    </View>
+                    <View style={styles.resultInfo}>
+                      <Text style={styles.resultName}>{result.commonName}</Text>
+                      <Text style={styles.resultSpecies}>{result.scientificName}</Text>
+                      <Text style={styles.resultDesc} numberOfLines={2}>{result.description}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : searchMutation.isError ? (
+              <View style={styles.searchEmpty}>
+                <Text style={styles.searchEmptyText}>Search failed. Please try again.</Text>
+              </View>
+            ) : (
+              <View style={styles.searchEmpty}>
+                <View style={styles.searchEmptyIcon}>
+                  <Search size={40} color={Colors.textTertiary} strokeWidth={1.2} />
+                </View>
+                <Text style={styles.searchEmptyTitle}>Search by Plant Name</Text>
+                <Text style={styles.searchEmptyText}>Type a plant name and tap Go to find it</Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -509,6 +535,43 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: Colors.text,
   },
+  modeToggle: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: 'rgba(60, 60, 67, 0.06)',
+    borderRadius: 12,
+    padding: 3,
+  },
+  modeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  modeBtnActive: {
+    backgroundColor: Colors.primary,
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+      },
+      android: { elevation: 3 },
+    }),
+  },
+  modeText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: Colors.textSecondary,
+  },
+  modeTextActive: {
+    color: '#fff',
+  },
   body: {
     flex: 1,
     justifyContent: 'space-between',
@@ -542,7 +605,6 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     color: Colors.error,
     textAlign: 'center',
-    letterSpacing: -0.3,
     marginTop: 16,
   },
   errorPreview: {
@@ -575,9 +637,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 8,
       },
-      android: {
-        elevation: 4,
-      },
+      android: { elevation: 4 },
     }),
   },
   primaryButtonText: {
@@ -598,9 +658,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 16,
     fontWeight: '500' as const,
-  },
-  disabledButton: {
-    opacity: 0.5,
   },
   loadingContainer: {
     flex: 1,
@@ -637,6 +694,138 @@ const styles = StyleSheet.create({
   scanningSubtext: {
     fontSize: 14,
     color: Colors.textSecondary,
+  },
+  searchBody: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  searchInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  searchInputWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.cardSolid,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'ios' ? 12 : 8,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.text,
+    padding: 0,
+  },
+  searchBtn: {
+    backgroundColor: Colors.primary,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchBtnDisabled: {
+    opacity: 0.5,
+  },
+  searchBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700' as const,
+  },
+  searchLoading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  searchLoadingText: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+  },
+  resultsList: {
+    flex: 1,
+  },
+  resultsContent: {
+    paddingBottom: 32,
+    gap: 10,
+  },
+  resultCard: {
+    flexDirection: 'row',
+    backgroundColor: Colors.cardSolid,
+    borderRadius: 14,
+    padding: 16,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  resultIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: Colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resultInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  resultName: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: Colors.text,
+  },
+  resultSpecies: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  resultDesc: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  searchEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  searchEmptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    backgroundColor: 'rgba(60, 60, 67, 0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  searchEmptyTitle: {
+    fontSize: 20,
+    fontWeight: '600' as const,
+    color: Colors.text,
+  },
+  searchEmptyText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
   hiddenInputs: {
     position: 'absolute',

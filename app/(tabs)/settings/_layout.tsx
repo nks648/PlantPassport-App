@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import Colors from '@/constants/colors';
 
-export default function CommunityLayout() {
+export default function SettingsLayout() {
   return (
     <Stack
       screenOptions={{
@@ -10,7 +10,7 @@ export default function CommunityLayout() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Community & Ranks', headerTitleStyle: { fontWeight: '700', fontSize: 22, letterSpacing: -0.4 } }} />
+      <Stack.Screen name="index" options={{ title: 'Settings', headerTitleStyle: { fontWeight: '700', fontSize: 22, letterSpacing: -0.4 } }} />
     </Stack>
   );
 }

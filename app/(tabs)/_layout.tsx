@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Home, Leaf, User, Users, Trophy } from 'lucide-react-native';
+import { Home, Leaf, User, Users, Settings } from 'lucide-react-native';
 import { Platform, StyleSheet } from 'react-native';
 import Colors from '@/constants/colors';
 
@@ -53,15 +53,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, focused }) => (
-            <User size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2 : 1.6} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="community"
         options={{
           title: 'Community',
@@ -71,12 +62,27 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, focused }) => (
+            <User size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2 : 1.6} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color, focused }) => (
+            <Settings size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2 : 1.6} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="leaderboard"
         options={{
-          title: 'Ranks',
-          tabBarIcon: ({ color, focused }) => (
-            <Trophy size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2 : 1.6} />
-          ),
+          href: null,
         }}
       />
     </Tabs>
