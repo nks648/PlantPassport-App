@@ -8,6 +8,7 @@ import Colors from '@/constants/colors';
 import { usePlants } from '@/providers/PlantProvider';
 import { PlantNeeds } from '@/types/plant';
 import GlassCard from '@/components/GlassCard';
+import { shouldUseCelsius, formatTempRange, getTempBarValues } from '@/utils/temperature';
 
 const plantInfoSchema = z.object({
   careInstructions: z.array(z.string()).describe('Exactly 5 concise care instruction bullet points for this plant'),
@@ -42,6 +43,11 @@ function NeedBar({ level, color }: { level: number; color: string }) {
 }
 
 function NeedsSection({ needs }: { needs: PlantNeeds }) {
+  const useCelsius = shouldUseCelsius();
+  const tempDisplay = formatTempRange(needs.idealTempMin, needs.idealTempMax, useCelsius);
+  const tempBar = getTempBarValues(needs.idealTempMin, needs.idealTempMax, useCelsius);
+  const scaleRange = tempBar.scaleMax - tempBar.scaleMin;
+
   return (
     <GlassCard style={styles.sectionCard}>
       <View style={styles.sectionInner}>
@@ -98,7 +104,7 @@ function NeedsSection({ needs }: { needs: PlantNeeds }) {
           <View style={styles.needContent}>
             <View style={styles.needHeader}>
               <Text style={styles.needLabel}>Temperature</Text>
-              <Text style={styles.needValue}>{needs.idealTempMin}°–{needs.idealTempMax}°F</Text>
+              <Text style={styles.needValue}>{tempDisplay}</Text>
             </View>
             <View style={styles.tempBar}>
               <View style={styles.tempTrack}>
@@ -106,15 +112,15 @@ function NeedsSection({ needs }: { needs: PlantNeeds }) {
                   style={[
                     styles.tempRange,
                     {
-                      left: `${((needs.idealTempMin - 40) / 80) * 100}%` as string,
-                      right: `${100 - ((needs.idealTempMax - 40) / 80) * 100}%` as string,
+                      left: `${((tempBar.min - tempBar.scaleMin) / scaleRange) * 100}%` as string,
+                      right: `${100 - ((tempBar.max - tempBar.scaleMin) / scaleRange) * 100}%` as string,
                     },
                   ]}
                 />
               </View>
               <View style={styles.tempLabels}>
-                <Text style={styles.tempLabel}>40°</Text>
-                <Text style={styles.tempLabel}>120°</Text>
+                <Text style={styles.tempLabel}>{tempBar.scaleMin}{tempBar.unit}</Text>
+                <Text style={styles.tempLabel}>{tempBar.scaleMax}{tempBar.unit}</Text>
               </View>
             </View>
           </View>

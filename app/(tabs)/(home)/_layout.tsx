@@ -14,7 +14,7 @@ export default function HomeLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Plantual',
+          title: 'Plant Passport',
           headerTitleStyle: { fontWeight: '700', fontSize: 22, letterSpacing: -0.4 },
         }}
       />

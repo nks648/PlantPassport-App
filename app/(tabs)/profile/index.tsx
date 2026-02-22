@@ -9,9 +9,11 @@ import {
   Platform,
   Animated,
   Alert,
+  ActionSheetIOS,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import {
   User,
   Edit3,
@@ -27,6 +29,7 @@ import {
   CloudSun,
   AlertTriangle,
   Wind,
+  Camera,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { usePlants } from '@/providers/PlantProvider';
@@ -217,6 +220,30 @@ export default function ProfileScreen() {
     setIsEditing(true);
   }, [userProfile.name]);
 
+  const handlePickAvatar = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please allow access to your photo library to change your profile picture.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets[0]) {
+        console.log('New avatar selected:', result.assets[0].uri);
+        await updateProfile({ avatar: result.assets[0].uri });
+      }
+    } catch (e) {
+      console.log('Image picker error:', e);
+      Alert.alert('Error', 'Could not pick image. Please try again.');
+    }
+  }, [updateProfile]);
+
   const xpProgress = rankInfo.xpToNext
     ? Math.min((userProfile.xp - (getRankForXP(userProfile.xp - 1).xpToNext != null ? 0 : 0)) / ((rankInfo.xpToNext ?? 0) + userProfile.xp), 1)
     : 1;
@@ -246,7 +273,12 @@ export default function ProfileScreen() {
       >
         <GlassCard style={styles.profileCard}>
           <View style={styles.profileHeader}>
-            <Image source={{ uri: userProfile.avatar }} style={styles.avatar} />
+            <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.8} style={styles.avatarContainer}>
+              <Image source={{ uri: userProfile.avatar }} style={styles.avatar} />
+              <View style={styles.avatarBadge}>
+                <Camera size={12} color="#fff" strokeWidth={2} />
+              </View>
+            </TouchableOpacity>
             <View style={styles.profileInfo}>
               {isEditing ? (
                 <View style={styles.editRow}>
@@ -444,12 +476,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
+  avatarContainer: {
+    position: 'relative' as const,
+  },
   avatar: {
     width: 68,
     height: 68,
     borderRadius: 34,
     borderWidth: 3,
     borderColor: 'rgba(48, 209, 88, 0.2)',
+  },
+  avatarBadge: {
+    position: 'absolute' as const,
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.primary,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderWidth: 2,
+    borderColor: Colors.cardSolid || '#fff',
   },
   profileInfo: {
     flex: 1,

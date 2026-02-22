@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Droplets, Sun, Thermometer, Wrench, CloudRain } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { PlantNeeds } from '@/types/plant';
+import { shouldUseCelsius, formatTempRange, getTempBarValues } from '@/utils/temperature';
 
 interface PlantNeedsCardProps {
   needs: PlantNeeds;
@@ -33,6 +34,11 @@ function NeedBar({ level, color }: { level: number; color: string }) {
 }
 
 export default React.memo(function PlantNeedsCard({ needs }: PlantNeedsCardProps) {
+  const useCelsius = shouldUseCelsius();
+  const tempDisplay = formatTempRange(needs.idealTempMin, needs.idealTempMax, useCelsius);
+  const tempBar = getTempBarValues(needs.idealTempMin, needs.idealTempMax, useCelsius);
+  const scaleRange = tempBar.scaleMax - tempBar.scaleMin;
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Care Guide</Text>
@@ -83,7 +89,7 @@ export default React.memo(function PlantNeedsCard({ needs }: PlantNeedsCardProps
         <View style={styles.needContent}>
           <View style={styles.needHeader}>
             <Text style={styles.needLabel}>Temperature</Text>
-            <Text style={styles.needValue}>{needs.idealTempMin}°–{needs.idealTempMax}°F</Text>
+            <Text style={styles.needValue}>{tempDisplay}</Text>
           </View>
           <View style={styles.tempBar}>
             <View style={styles.tempTrack}>
@@ -91,15 +97,15 @@ export default React.memo(function PlantNeedsCard({ needs }: PlantNeedsCardProps
                 style={[
                   styles.tempRange,
                   {
-                    left: `${((needs.idealTempMin - 40) / 80) * 100}%` as const,
-                    right: `${100 - ((needs.idealTempMax - 40) / 80) * 100}%` as const,
+                    left: `${((tempBar.min - tempBar.scaleMin) / scaleRange) * 100}%` as const,
+                    right: `${100 - ((tempBar.max - tempBar.scaleMin) / scaleRange) * 100}%` as const,
                   },
                 ]}
               />
             </View>
             <View style={styles.tempLabels}>
-              <Text style={styles.tempLabel}>40°</Text>
-              <Text style={styles.tempLabel}>120°</Text>
+              <Text style={styles.tempLabel}>{tempBar.scaleMin}{tempBar.unit}</Text>
+              <Text style={styles.tempLabel}>{tempBar.scaleMax}{tempBar.unit}</Text>
             </View>
           </View>
         </View>
