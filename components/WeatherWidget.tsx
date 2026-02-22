@@ -10,6 +10,7 @@ interface WeatherData {
   description: string;
   city: string;
   windSpeed: number;
+  useCelsius: boolean;
   forecast: { day: string; high: number; low: number; condition: string }[];
 }
 
@@ -18,13 +19,19 @@ interface CareHint {
   type: 'warning' | 'info' | 'tip';
 }
 
+function toComparableF(temp: number, useCelsius: boolean): number {
+  return useCelsius ? temp * 9 / 5 + 32 : temp;
+}
+
 function generateCareHints(weather: WeatherData): CareHint[] {
   const hints: CareHint[] = [];
   const avgHighNext = weather.forecast.reduce((s, f) => s + f.high, 0) / Math.max(weather.forecast.length, 1);
+  const avgHighF = toComparableF(avgHighNext, weather.useCelsius);
+  const tempF = toComparableF(weather.temp, weather.useCelsius);
 
-  if (avgHighNext > 85) {
+  if (avgHighF > 85) {
     hints.push({ message: 'Hot days ahead — water your plants more frequently and move sensitive ones away from direct sun.', type: 'warning' });
-  } else if (avgHighNext > 75) {
+  } else if (avgHighF > 75) {
     hints.push({ message: 'Warm week coming up. Check soil moisture daily and mist humidity-loving plants.', type: 'tip' });
   }
 
@@ -34,11 +41,11 @@ function generateCareHints(weather: WeatherData): CareHint[] {
     hints.push({ message: 'High humidity — reduce watering for succulents and watch for fungal issues.', type: 'info' });
   }
 
-  if (weather.temp < 50) {
+  if (tempF < 50) {
     hints.push({ message: 'Cold snap! Move tropical plants away from windows and reduce watering.', type: 'warning' });
   }
 
-  if (weather.windSpeed > 15) {
+  if (weather.windSpeed > (weather.useCelsius ? 24 : 15)) {
     hints.push({ message: 'Windy conditions. Secure outdoor plants and check for drying soil.', type: 'tip' });
   }
 
@@ -49,6 +56,14 @@ function generateCareHints(weather: WeatherData): CareHint[] {
   return hints;
 }
 
+const US_COUNTRY_CODES = ['us', 'usa', 'united states', 'united states of america'];
+const IMPERIAL_COUNTRIES = ['us', 'usa', 'united states', 'united states of america', 'mm', 'myanmar', 'lr', 'liberia', 'bs', 'bahamas', 'ky', 'cayman islands', 'pw', 'palau', 'mh', 'marshall islands'];
+
+function shouldUseCelsius(countryCode?: string): boolean {
+  if (!countryCode) return false;
+  return !IMPERIAL_COUNTRIES.includes(countryCode.toLowerCase());
+}
+
 function getFallbackWeather(): WeatherData {
   return {
     temp: 72,
@@ -56,6 +71,7 @@ function getFallbackWeather(): WeatherData {
     description: 'Partly Cloudy',
     city: 'Your Area',
     windSpeed: 8,
+    useCelsius: false,
     forecast: [
       { day: 'Mon', high: 78, low: 62, condition: 'sunny' },
       { day: 'Tue', high: 82, low: 65, condition: 'partly_cloudy' },
@@ -140,8 +156,23 @@ export default function WeatherWidget() {
 
   const fetchWeatherByCoords = async (lat: number, lon: number) => {
     try {
+      let cityName = 'Your Area';
+      let countryCode = '';
+      try {
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`);
+        const geoData = await geoRes.json();
+        cityName = geoData.address?.city || geoData.address?.town || geoData.address?.village || 'Your Area';
+        countryCode = geoData.address?.country_code || '';
+      } catch {
+        console.log('Reverse geocoding failed');
+      }
+
+      const useCelsius = shouldUseCelsius(countryCode);
+      const tempUnit = useCelsius ? 'celsius' : 'fahrenheit';
+      const windUnit = useCelsius ? 'kmh' : 'mph';
+
       const response = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=5`
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&temperature_unit=${tempUnit}&wind_speed_unit=${windUnit}&timezone=auto&forecast_days=5`
       );
       const data = await response.json();
 
@@ -167,21 +198,13 @@ export default function WeatherWidget() {
       else if (weatherCode >= 45) desc = 'Cloudy';
       else if (weatherCode >= 2) desc = 'Partly Cloudy';
 
-      let cityName = 'Your Area';
-      try {
-        const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`);
-        const geoData = await geoRes.json();
-        cityName = geoData.address?.city || geoData.address?.town || geoData.address?.village || 'Your Area';
-      } catch {
-        console.log('Reverse geocoding failed');
-      }
-
       setWeather({
         temp: Math.round(data.current?.temperature_2m ?? 72),
         humidity: Math.round(data.current?.relative_humidity_2m ?? 55),
         description: desc,
         city: cityName,
         windSpeed: Math.round(data.current?.wind_speed_10m ?? 8),
+        useCelsius,
         forecast,
       });
     } catch (e) {
@@ -211,7 +234,7 @@ export default function WeatherWidget() {
       <GlassCard style={styles.container}>
         <View style={styles.topRow}>
           <View style={styles.tempSection}>
-            <Text style={styles.temp}>{weather.temp}°F</Text>
+            <Text style={styles.temp}>{weather.temp}°{weather.useCelsius ? 'C' : 'F'}</Text>
             <Text style={styles.description}>{weather.description}</Text>
             <Text style={styles.city}>{weather.city}</Text>
           </View>
@@ -222,7 +245,7 @@ export default function WeatherWidget() {
             </View>
             <View style={styles.detailRow}>
               <Wind size={13} color={Colors.textSecondary} strokeWidth={1.6} />
-              <Text style={styles.detailText}>{weather.windSpeed} mph</Text>
+              <Text style={styles.detailText}>{weather.windSpeed} {weather.useCelsius ? 'km/h' : 'mph'}</Text>
             </View>
           </View>
         </View>

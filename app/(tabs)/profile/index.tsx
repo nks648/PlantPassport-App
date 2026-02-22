@@ -40,6 +40,7 @@ interface LocationWeather {
   humidity: number;
   description: string;
   windSpeed: number;
+  useCelsius: boolean;
 }
 
 interface LocationCareAdvice {
@@ -48,20 +49,29 @@ interface LocationCareAdvice {
   type: 'warning' | 'info' | 'tip';
 }
 
+function fToC(f: number): number {
+  return Math.round((f - 32) * 5 / 9);
+}
+
 function generateLocationCare(weather: LocationWeather, plants: { name: string; needs: { water: number; light: number; humidity: number; idealTempMin: number; idealTempMax: number } }[]): LocationCareAdvice[] {
   const advice: LocationCareAdvice[] = [];
+  const unit = weather.useCelsius ? '°C' : '°F';
+  const currentTemp = weather.temp;
 
   plants.forEach((plant) => {
-    if (weather.temp > plant.needs.idealTempMax) {
+    const idealMin = weather.useCelsius ? fToC(plant.needs.idealTempMin) : plant.needs.idealTempMin;
+    const idealMax = weather.useCelsius ? fToC(plant.needs.idealTempMax) : plant.needs.idealTempMax;
+
+    if (currentTemp > idealMax) {
       advice.push({
         title: plant.name,
-        message: `Current ${weather.temp}°F exceeds ideal range (${plant.needs.idealTempMin}–${plant.needs.idealTempMax}°F). Move to a cooler spot and increase watering.`,
+        message: `Current ${currentTemp}${unit} exceeds ideal range (${idealMin}–${idealMax}${unit}). Move to a cooler spot and increase watering.`,
         type: 'warning',
       });
-    } else if (weather.temp < plant.needs.idealTempMin) {
+    } else if (currentTemp < idealMin) {
       advice.push({
         title: plant.name,
-        message: `Current ${weather.temp}°F is below ideal (${plant.needs.idealTempMin}–${plant.needs.idealTempMax}°F). Keep away from cold drafts and reduce watering.`,
+        message: `Current ${currentTemp}${unit} is below ideal (${idealMin}–${idealMax}${unit}). Keep away from cold drafts and reduce watering.`,
         type: 'warning',
       });
     }
@@ -76,9 +86,10 @@ function generateLocationCare(weather: LocationWeather, plants: { name: string; 
   });
 
   if (advice.length === 0) {
+    const locationLabel = weather.city !== 'Unknown' ? weather.city : 'your area';
     advice.push({
       title: 'All Clear',
-      message: `Conditions in ${weather.city} look great for your plants right now. Keep up the routine!`,
+      message: `Conditions in ${locationLabel} look great for your plants right now. Keep up the routine!`,
       type: 'tip',
     });
   }
@@ -114,13 +125,13 @@ export default function ProfileScreen() {
               await fetchWeatherForLocation(pos.coords.latitude, pos.coords.longitude);
             },
             () => {
-              setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8 });
+              setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8, useCelsius: false });
               setLocationLoading(false);
             },
             { timeout: 5000 }
           );
         } else {
-          setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8 });
+          setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8, useCelsius: false });
           setLocationLoading(false);
         }
       } else {
@@ -131,31 +142,37 @@ export default function ProfileScreen() {
             const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
             await fetchWeatherForLocation(loc.coords.latitude, loc.coords.longitude);
           } else {
-            setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8 });
+            setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8, useCelsius: false });
             setLocationLoading(false);
           }
         } else {
-          setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8 });
+          setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8, useCelsius: false });
           setLocationLoading(false);
         }
       }
     } catch {
-      setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8 });
+      setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8, useCelsius: false });
       setLocationLoading(false);
     }
   };
 
   const fetchWeatherForLocation = async (lat: number, lon: number) => {
     try {
-      const [weatherRes, geoRes] = await Promise.all([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`),
-        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`),
-      ]);
-
-      const weatherData = await weatherRes.json();
+      const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`);
       const geoData = await geoRes.json();
 
       const city = geoData.address?.city || geoData.address?.town || geoData.address?.village || 'Your Area';
+      const countryCode = (geoData.address?.country_code || '').toLowerCase();
+      const imperialCountries = ['us', 'mm', 'lr', 'bs', 'ky', 'pw', 'mh'];
+      const useCelsius = !imperialCountries.includes(countryCode);
+      const tempUnit = useCelsius ? 'celsius' : 'fahrenheit';
+      const windUnit = useCelsius ? 'kmh' : 'mph';
+
+      const weatherRes = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&temperature_unit=${tempUnit}&wind_speed_unit=${windUnit}&timezone=auto`
+      );
+      const weatherData = await weatherRes.json();
+
       const weatherCode = weatherData.current?.weather_code ?? 0;
       let desc = 'Clear';
       if (weatherCode >= 61) desc = 'Rainy';
@@ -168,10 +185,11 @@ export default function ProfileScreen() {
         humidity: Math.round(weatherData.current?.relative_humidity_2m ?? 55),
         description: desc,
         windSpeed: Math.round(weatherData.current?.wind_speed_10m ?? 8),
+        useCelsius,
       });
     } catch (e) {
       console.log('Location weather error:', e);
-      setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8 });
+      setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8, useCelsius: false });
     } finally {
       setLocationLoading(false);
     }
@@ -307,14 +325,14 @@ export default function ProfileScreen() {
           <>
             <View style={styles.sectionHeader}>
               <MapPin size={16} color={Colors.accent} strokeWidth={1.8} />
-              <Text style={styles.sectionTitle}>Care for {locationWeather.city}</Text>
+              <Text style={styles.sectionTitle}>Plant care for {locationWeather.city !== 'Unknown' ? locationWeather.city : 'your location'}</Text>
             </View>
 
             <GlassCard style={styles.locationCard}>
               <View style={styles.locationRow}>
                 <View style={styles.locationDetail}>
                   <Thermometer size={14} color={Colors.text} strokeWidth={1.6} />
-                  <Text style={styles.locationValue}>{locationWeather.temp}°F</Text>
+                  <Text style={styles.locationValue}>{locationWeather.temp}°{locationWeather.useCelsius ? 'C' : 'F'}</Text>
                 </View>
                 <View style={styles.locationDetail}>
                   <Droplets size={14} color={Colors.accent} strokeWidth={1.6} />
@@ -322,7 +340,7 @@ export default function ProfileScreen() {
                 </View>
                 <View style={styles.locationDetail}>
                   <Wind size={14} color={Colors.textSecondary} strokeWidth={1.6} />
-                  <Text style={styles.locationValue}>{locationWeather.windSpeed} mph</Text>
+                  <Text style={styles.locationValue}>{locationWeather.windSpeed} {locationWeather.useCelsius ? 'km/h' : 'mph'}</Text>
                 </View>
                 <View style={styles.locationDetail}>
                   <CloudSun size={14} color={Colors.warning} strokeWidth={1.6} />
