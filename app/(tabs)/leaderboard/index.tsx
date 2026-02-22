@@ -3,13 +3,14 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { Image } from 'expo-image';
 import { Trophy, Flame, Leaf } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import Colors from '@/constants/colors';
+import { useSettings } from '@/providers/SettingsProvider';
 import { MOCK_LEADERBOARD } from '@/mocks/plants';
 import GlassCard from '@/components/GlassCard';
 
 type TimeFilter = 'all-time' | 'weekly';
 
 export default function LeaderboardScreen() {
+  const { colors } = useSettings();
   const [filter, setFilter] = useState<TimeFilter>('all-time');
 
   const handleFilterChange = useCallback((f: TimeFilter) => {
@@ -27,35 +28,35 @@ export default function LeaderboardScreen() {
   const rest = sorted.slice(3);
   const currentUser = sorted.find(e => e.isCurrentUser);
 
-  const medalColors = [Colors.gold, Colors.silver, Colors.bronze];
+  const medalColors = [colors.gold, colors.silver, colors.bronze];
 
   const getStreakValue = (entry: typeof sorted[0]) =>
     filter === 'weekly' ? (entry.weeklyStreak ?? 0) : entry.streak;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.filterRow}>
+        <View style={[styles.filterRow, { backgroundColor: colors.inputBackground }]}>
           <TouchableOpacity
-            style={[styles.filterBtn, filter === 'all-time' && styles.filterBtnActive]}
+            style={[styles.filterBtn, filter === 'all-time' && [styles.filterBtnActive, { backgroundColor: colors.cardSolid }]]}
             onPress={() => handleFilterChange('all-time')}
             activeOpacity={0.8}
           >
-            <Text style={[styles.filterText, filter === 'all-time' && styles.filterTextActive]}>All Time</Text>
+            <Text style={[styles.filterText, { color: colors.textSecondary }, filter === 'all-time' && { color: colors.text, fontWeight: '600' as const }]}>All Time</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.filterBtn, filter === 'weekly' && styles.filterBtnActive]}
+            style={[styles.filterBtn, filter === 'weekly' && [styles.filterBtnActive, { backgroundColor: colors.cardSolid }]]}
             onPress={() => handleFilterChange('weekly')}
             activeOpacity={0.8}
           >
-            <Text style={[styles.filterText, filter === 'weekly' && styles.filterTextActive]}>This Week</Text>
+            <Text style={[styles.filterText, { color: colors.textSecondary }, filter === 'weekly' && { color: colors.text, fontWeight: '600' as const }]}>This Week</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {filter === 'all-time' ? 'Most consistent plant parents' : 'Top performers this week'}
         </Text>
 
@@ -67,15 +68,15 @@ export default function LeaderboardScreen() {
             return (
               <View key={entry.id} style={[styles.podiumItem, isFirst && styles.podiumFirst]}>
                 <View style={[styles.medalCircle, { borderColor: medalColors[idx] }]}>
-                  <Image source={{ uri: entry.avatar }} style={styles.podiumAvatar} />
+                  <Image source={{ uri: entry.avatar }} style={[styles.podiumAvatar, { backgroundColor: colors.divider }]} />
                   <View style={[styles.rankBadge, { backgroundColor: medalColors[idx] }]}>
                     <Text style={styles.rankBadgeText}>{entry.rank}</Text>
                   </View>
                 </View>
-                <Text style={styles.podiumName} numberOfLines={1}>{entry.userName}</Text>
+                <Text style={[styles.podiumName, { color: colors.text }]} numberOfLines={1}>{entry.userName}</Text>
                 <View style={styles.podiumStreakRow}>
-                  <Flame size={12} color={Colors.streak} strokeWidth={1.8} />
-                  <Text style={styles.podiumStreak}>{getStreakValue(entry)}</Text>
+                  <Flame size={12} color={colors.streak} strokeWidth={1.8} />
+                  <Text style={[styles.podiumStreak, { color: colors.text }]}>{getStreakValue(entry)}</Text>
                 </View>
               </View>
             );
@@ -85,25 +86,25 @@ export default function LeaderboardScreen() {
         {rest.map((entry) => (
           <GlassCard
             key={entry.id}
-            style={[styles.listItem, entry.isCurrentUser && styles.listItemHighlight]}
+            style={[styles.listItem, entry.isCurrentUser && { backgroundColor: 'rgba(48, 209, 88, 0.04)', borderColor: 'rgba(48, 209, 88, 0.15)', borderWidth: 1 }]}
           >
-            <Text style={[styles.rank, entry.isCurrentUser && styles.rankHighlight]}>
+            <Text style={[styles.rank, { color: colors.textSecondary }, entry.isCurrentUser && { color: colors.primary }]}>
               {entry.rank}
             </Text>
-            <Image source={{ uri: entry.avatar }} style={styles.listAvatar} />
+            <Image source={{ uri: entry.avatar }} style={[styles.listAvatar, { backgroundColor: colors.divider }]} />
             <View style={styles.listInfo}>
-              <Text style={[styles.listName, entry.isCurrentUser && styles.listNameHighlight]}>
+              <Text style={[styles.listName, { color: colors.text }, entry.isCurrentUser && { color: colors.primary, fontWeight: '600' as const }]}>
                 {entry.userName}
                 {entry.isCurrentUser ? ' (You)' : ''}
               </Text>
               <View style={styles.listMeta}>
-                <Leaf size={11} color={Colors.textSecondary} strokeWidth={1.8} />
-                <Text style={styles.listMetaText}>{entry.totalPlants} plants</Text>
+                <Leaf size={11} color={colors.textSecondary} strokeWidth={1.8} />
+                <Text style={[styles.listMetaText, { color: colors.textSecondary }]}>{entry.totalPlants} plants</Text>
               </View>
             </View>
-            <View style={styles.listStreak}>
-              <Flame size={14} color={Colors.streak} strokeWidth={1.8} />
-              <Text style={styles.listStreakText}>{getStreakValue(entry)}</Text>
+            <View style={[styles.listStreak, { backgroundColor: colors.streakGlow }]}>
+              <Flame size={14} color={colors.streak} strokeWidth={1.8} />
+              <Text style={[styles.listStreakText, { color: colors.text }]}>{getStreakValue(entry)}</Text>
             </View>
           </GlassCard>
         ))}
@@ -111,25 +112,25 @@ export default function LeaderboardScreen() {
         {currentUser && currentUser.rank > 3 && (
           <View style={styles.pinnedSection}>
             <View style={styles.pinnedDivider}>
-              <View style={styles.pinnedLine} />
-              <Text style={styles.pinnedLabel}>Your Rank</Text>
-              <View style={styles.pinnedLine} />
+              <View style={[styles.pinnedLine, { backgroundColor: colors.divider }]} />
+              <Text style={[styles.pinnedLabel, { color: colors.textSecondary }]}>Your Rank</Text>
+              <View style={[styles.pinnedLine, { backgroundColor: colors.divider }]} />
             </View>
-            <GlassCard style={[styles.listItem, styles.listItemHighlight]}>
-              <Text style={[styles.rank, styles.rankHighlight]}>{currentUser.rank}</Text>
-              <Image source={{ uri: currentUser.avatar }} style={styles.listAvatar} />
+            <GlassCard style={[styles.listItem, { backgroundColor: 'rgba(48, 209, 88, 0.04)', borderColor: 'rgba(48, 209, 88, 0.15)', borderWidth: 1 }]}>
+              <Text style={[styles.rank, { color: colors.primary }]}>{currentUser.rank}</Text>
+              <Image source={{ uri: currentUser.avatar }} style={[styles.listAvatar, { backgroundColor: colors.divider }]} />
               <View style={styles.listInfo}>
-                <Text style={[styles.listName, styles.listNameHighlight]}>
+                <Text style={[styles.listName, { color: colors.primary, fontWeight: '600' as const }]}>
                   {currentUser.userName} (You)
                 </Text>
                 <View style={styles.listMeta}>
-                  <Leaf size={11} color={Colors.textSecondary} strokeWidth={1.8} />
-                  <Text style={styles.listMetaText}>{currentUser.totalPlants} plants</Text>
+                  <Leaf size={11} color={colors.textSecondary} strokeWidth={1.8} />
+                  <Text style={[styles.listMetaText, { color: colors.textSecondary }]}>{currentUser.totalPlants} plants</Text>
                 </View>
               </View>
-              <View style={styles.listStreak}>
-                <Flame size={14} color={Colors.streak} strokeWidth={1.8} />
-                <Text style={styles.listStreakText}>{getStreakValue(currentUser)}</Text>
+              <View style={[styles.listStreak, { backgroundColor: colors.streakGlow }]}>
+                <Flame size={14} color={colors.streak} strokeWidth={1.8} />
+                <Text style={[styles.listStreakText, { color: colors.text }]}>{getStreakValue(currentUser)}</Text>
               </View>
             </GlassCard>
           </View>
@@ -142,7 +143,6 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   content: {
     padding: 20,
@@ -152,7 +152,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 4,
     marginBottom: 16,
-    backgroundColor: 'rgba(60, 60, 67, 0.05)',
     borderRadius: 10,
     padding: 2,
   },
@@ -163,7 +162,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   filterBtnActive: {
-    backgroundColor: Colors.cardSolid,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
@@ -173,15 +171,9 @@ const styles = StyleSheet.create({
   filterText: {
     fontSize: 14,
     fontWeight: '500' as const,
-    color: Colors.textSecondary,
-  },
-  filterTextActive: {
-    color: Colors.text,
-    fontWeight: '600' as const,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
     marginBottom: 24,
   },
   podium: {
@@ -209,7 +201,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.divider,
   },
   rankBadge: {
     position: 'absolute',
@@ -229,7 +220,6 @@ const styles = StyleSheet.create({
   podiumName: {
     fontSize: 12,
     fontWeight: '500' as const,
-    color: Colors.text,
     marginTop: 8,
     textAlign: 'center',
   },
@@ -242,7 +232,6 @@ const styles = StyleSheet.create({
   podiumStreak: {
     fontSize: 13,
     fontWeight: '600' as const,
-    color: Colors.text,
   },
   listItem: {
     flexDirection: 'row',
@@ -250,27 +239,17 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 8,
   },
-  listItemHighlight: {
-    backgroundColor: 'rgba(48, 209, 88, 0.04)',
-    borderColor: 'rgba(48, 209, 88, 0.15)',
-    borderWidth: 1,
-  },
   rank: {
     width: 28,
     fontSize: 15,
     fontWeight: '600' as const,
-    color: Colors.textSecondary,
     textAlign: 'center',
-  },
-  rankHighlight: {
-    color: Colors.primary,
   },
   listAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     marginLeft: 8,
-    backgroundColor: Colors.divider,
   },
   listInfo: {
     flex: 1,
@@ -279,11 +258,6 @@ const styles = StyleSheet.create({
   listName: {
     fontSize: 14,
     fontWeight: '500' as const,
-    color: Colors.text,
-  },
-  listNameHighlight: {
-    color: Colors.primary,
-    fontWeight: '600' as const,
   },
   listMeta: {
     flexDirection: 'row',
@@ -293,13 +267,11 @@ const styles = StyleSheet.create({
   },
   listMetaText: {
     fontSize: 12,
-    color: Colors.textSecondary,
   },
   listStreak: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Colors.streakGlow,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 12,
@@ -307,7 +279,6 @@ const styles = StyleSheet.create({
   listStreakText: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: Colors.text,
   },
   pinnedSection: {
     marginTop: 8,
@@ -321,11 +292,9 @@ const styles = StyleSheet.create({
   pinnedLine: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.divider,
   },
   pinnedLabel: {
     fontSize: 12,
     fontWeight: '500' as const,
-    color: Colors.textSecondary,
   },
 });

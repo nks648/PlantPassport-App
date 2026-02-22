@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
-import Colors from '@/constants/colors';
+import { useSettings } from '@/providers/SettingsProvider';
 
 interface GlassCardProps {
   children: React.ReactNode;
@@ -8,8 +8,9 @@ interface GlassCardProps {
 }
 
 export default function GlassCard({ children, style }: GlassCardProps) {
+  const { colors } = useSettings();
   return (
-    <View style={[styles.card, style]}>
+    <View style={[styles.card, { backgroundColor: colors.cardSolid }, style]}>
       {children}
     </View>
   );
@@ -17,7 +18,6 @@ export default function GlassCard({ children, style }: GlassCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.cardSolid,
     borderRadius: 16,
     borderWidth: 0,
     ...Platform.select({

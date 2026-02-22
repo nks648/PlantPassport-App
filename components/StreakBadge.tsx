@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import Colors from '@/constants/colors';
+import { useSettings } from '@/providers/SettingsProvider';
 
 interface StreakBadgeProps {
   streak: number;
@@ -8,6 +8,7 @@ interface StreakBadgeProps {
 }
 
 export default function StreakBadge({ streak, size = 'medium' }: StreakBadgeProps) {
+  const { colors } = useSettings();
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -34,13 +35,14 @@ export default function StreakBadge({ streak, size = 'medium' }: StreakBadgeProp
           paddingHorizontal: paddingH,
           paddingVertical: paddingV,
           transform: [{ scale: pulseAnim }],
+          backgroundColor: colors.streakGlow,
         },
-        streak >= 30 && styles.badgeGold,
-        streak >= 7 && streak < 30 && styles.badgeHot,
+        streak >= 30 && { backgroundColor: 'rgba(255, 214, 10, 0.15)', borderWidth: 1, borderColor: 'rgba(255, 214, 10, 0.3)' },
+        streak >= 7 && streak < 30 && { backgroundColor: 'rgba(255, 149, 0, 0.15)' },
       ]}
     >
       <Text style={{ fontSize: iconSize }}>🔥</Text>
-      <Text style={[styles.text, { fontSize }]}>{streak}</Text>
+      <Text style={[styles.text, { fontSize, color: colors.text }]}>{streak}</Text>
     </Animated.View>
   );
 }
@@ -50,19 +52,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: Colors.streakGlow,
     borderRadius: 20,
-  },
-  badgeHot: {
-    backgroundColor: 'rgba(255, 149, 0, 0.15)',
-  },
-  badgeGold: {
-    backgroundColor: 'rgba(255, 214, 10, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 214, 10, 0.3)',
   },
   text: {
     fontWeight: '600' as const,
-    color: Colors.text,
   },
 });

@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Colors from '@/constants/colors';
+import { useSettings } from '@/providers/SettingsProvider';
 import { WATERING_CHART_DATA } from '@/mocks/plants';
 import GlassCard from './GlassCard';
 
 export default function WateringChart() {
+  const { colors } = useSettings();
   const data = WATERING_CHART_DATA;
   const totalDays = data.length;
   const wateredDays = data.filter(d => d === 1).length;
@@ -13,8 +14,8 @@ export default function WateringChart() {
   return (
     <GlassCard style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>30-Day Consistency</Text>
-        <View style={styles.percentBadge}>
+        <Text style={[styles.title, { color: colors.text }]}>30-Day Consistency</Text>
+        <View style={[styles.percentBadge, { backgroundColor: colors.primary }]}>
           <Text style={styles.percentText}>{percentage}%</Text>
         </View>
       </View>
@@ -26,7 +27,7 @@ export default function WateringChart() {
                 styles.bar,
                 {
                   height: val === 1 ? 28 : 6,
-                  backgroundColor: val === 1 ? Colors.primary : 'rgba(60, 60, 67, 0.05)',
+                  backgroundColor: val === 1 ? colors.primary : colors.inputBackground,
                   borderRadius: 3,
                 },
               ]}
@@ -35,8 +36,8 @@ export default function WateringChart() {
         ))}
       </View>
       <View style={styles.labels}>
-        <Text style={styles.label}>30 days ago</Text>
-        <Text style={styles.label}>Today</Text>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>30 days ago</Text>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Today</Text>
       </View>
     </GlassCard>
   );
@@ -55,16 +56,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '600' as const,
-    color: Colors.text,
   },
   percentBadge: {
-    backgroundColor: Colors.primary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   percentText: {
-    color: Colors.textLight,
+    color: '#fff',
     fontSize: 12,
     fontWeight: '600' as const,
   },
@@ -90,6 +89,5 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 11,
-    color: Colors.textSecondary,
   },
 });

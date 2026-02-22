@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { X, Droplets, Check, Zap } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import Colors from '@/constants/colors';
+import { useSettings } from '@/providers/SettingsProvider';
 import { Plant } from '@/types/plant';
 import HealthDots from './HealthDots';
 
@@ -25,6 +25,7 @@ interface WaterModalProps {
 }
 
 export default function WaterModal({ visible, plant, onClose, onConfirm }: WaterModalProps) {
+  const { colors } = useSettings();
   const [health, setHealth] = useState<number>(4);
   const [note, setNote] = useState<string>('');
   const slideAnim = useRef(new Animated.Value(300)).current;
@@ -132,7 +133,7 @@ export default function WaterModal({ visible, plant, onClose, onConfirm }: Water
         <Animated.View
           style={[
             styles.sheet,
-            { transform: [{ translateY: slideAnim }] },
+            { transform: [{ translateY: slideAnim }], backgroundColor: colors.cardSolid },
           ]}
         >
           {showSuccess ? (
@@ -146,8 +147,8 @@ export default function WaterModal({ visible, plant, onClose, onConfirm }: Water
                   },
                 ]}
               >
-                <View style={styles.successCircle}>
-                  <Check size={40} color={Colors.textLight} strokeWidth={3} />
+                <View style={[styles.successCircle, { backgroundColor: colors.success }]}>
+                  <Check size={40} color="#fff" strokeWidth={3} />
                 </View>
 
                 {confettiAnims.map((c, i) => (
@@ -176,45 +177,45 @@ export default function WaterModal({ visible, plant, onClose, onConfirm }: Water
                   transform: [{ scale: streakAnim }],
                 }}
               >
-                <Text style={styles.successText}>Watered!</Text>
-                <Text style={styles.streakToast}>🔥 Streak: {(plant.streak ?? 0) + 1} days!</Text>
+                <Text style={[styles.successText, { color: colors.text }]}>Watered!</Text>
+                <Text style={[styles.streakToast, { color: colors.accent }]}>🔥 Streak: {(plant.streak ?? 0) + 1} days!</Text>
                 <View style={styles.xpGainBadge}>
-                  <Zap size={14} color={Colors.xpPurple} />
-                  <Text style={styles.xpGainText}>+10 XP</Text>
+                  <Zap size={14} color={colors.xpPurple} />
+                  <Text style={[styles.xpGainText, { color: colors.xpPurple }]}>+10 XP</Text>
                 </View>
               </Animated.View>
             </View>
           ) : (
             <>
-              <View style={styles.handle} />
+              <View style={[styles.handle, { backgroundColor: colors.handleColor }]} />
               <View style={styles.sheetHeader}>
                 <View style={styles.sheetTitleRow}>
-                  <Droplets size={20} color={Colors.waterBlue} strokeWidth={1.8} />
-                  <Text style={styles.sheetTitle}>Water {plant.name}</Text>
+                  <Droplets size={20} color={colors.waterBlue} strokeWidth={1.8} />
+                  <Text style={[styles.sheetTitle, { color: colors.text }]}>Water {plant.name}</Text>
                 </View>
                 <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-                  <X size={22} color={Colors.textTertiary} />
+                  <X size={22} color={colors.textTertiary} />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.sectionLabel}>How's {plant.name} looking?</Text>
+              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>How's {plant.name} looking?</Text>
               <View style={styles.healthRow}>
                 <HealthDots health={health} interactive onSelect={setHealth} size={22} />
-                <Text style={styles.healthLabel}>
+                <Text style={[styles.healthLabel, { color: colors.primary }]}>
                   {health <= 2 ? 'Needs care' : health <= 3 ? 'Okay' : health <= 4 ? 'Healthy' : 'Thriving!'}
                 </Text>
               </View>
-              <Text style={styles.sectionLabel}>Add a note (optional)</Text>
+              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Add a note (optional)</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.text }]}
                 placeholder="e.g. Soil was dry, new growth spotted..."
-                placeholderTextColor={Colors.textTertiary}
+                placeholderTextColor={colors.textTertiary}
                 value={note}
                 onChangeText={setNote}
                 multiline
                 maxLength={200}
               />
-              <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm} activeOpacity={0.85}>
-                <Droplets size={18} color={Colors.textLight} strokeWidth={2} />
+              <TouchableOpacity style={[styles.confirmButton, { backgroundColor: colors.waterBlue }]} onPress={handleConfirm} activeOpacity={0.85}>
+                <Droplets size={18} color="#fff" strokeWidth={2} />
                 <Text style={styles.confirmText}>Confirm Watering</Text>
               </TouchableOpacity>
             </>
@@ -232,13 +233,12 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.overlay,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   overlayPress: {
     flex: 1,
   },
   sheet: {
-    backgroundColor: Colors.cardSolid,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 24,
@@ -249,7 +249,6 @@ const styles = StyleSheet.create({
   handle: {
     width: 36,
     height: 4,
-    backgroundColor: 'rgba(60, 60, 67, 0.1)',
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 16,
@@ -268,13 +267,11 @@ const styles = StyleSheet.create({
   sheetTitle: {
     fontSize: 20,
     fontWeight: '600' as const,
-    color: Colors.text,
     letterSpacing: -0.3,
   },
   sectionLabel: {
     fontSize: 14,
     fontWeight: '400' as const,
-    color: Colors.textSecondary,
     marginBottom: 10,
   },
   healthRow: {
@@ -286,14 +283,11 @@ const styles = StyleSheet.create({
   healthLabel: {
     fontSize: 14,
     fontWeight: '500' as const,
-    color: Colors.primary,
   },
   input: {
-    backgroundColor: Colors.background,
     borderRadius: 12,
     padding: 14,
     fontSize: 15,
-    color: Colors.text,
     marginBottom: 24,
     minHeight: 70,
     textAlignVertical: 'top',
@@ -303,12 +297,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.waterBlue,
     paddingVertical: 16,
     borderRadius: 14,
   },
   confirmText: {
-    color: Colors.textLight,
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600' as const,
   },
@@ -327,7 +320,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: Colors.success,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -338,13 +330,11 @@ const styles = StyleSheet.create({
   successText: {
     fontSize: 24,
     fontWeight: '600' as const,
-    color: Colors.text,
     textAlign: 'center',
   },
   streakToast: {
     fontSize: 16,
     fontWeight: '500' as const,
-    color: Colors.accent,
     textAlign: 'center',
     marginTop: 6,
   },
@@ -362,6 +352,5 @@ const styles = StyleSheet.create({
   xpGainText: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: Colors.xpPurple,
   },
 });

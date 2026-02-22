@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Platfor
 import { useRouter } from 'expo-router';
 import { ChevronDown, Plus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import Colors from '@/constants/colors';
 import { Plant } from '@/types/plant';
 import { usePlants } from '@/providers/PlantProvider';
+import { useSettings } from '@/providers/SettingsProvider';
 import PlantCard from '@/components/PlantCard';
 import PlantNeedsCard from '@/components/PlantNeedsCard';
 import WaterModal from '@/components/WaterModal';
@@ -13,6 +13,7 @@ import ShareModal from '@/components/ShareModal';
 
 export default function PlantsScreen() {
   const router = useRouter();
+  const { colors } = useSettings();
   const { plants, waterPlant, addCommunityPost, checkOverwatering } = usePlants();
   const [waterModalPlant, setWaterModalPlant] = useState<Plant | null>(null);
   const [shareModalVisible, setShareModalVisible] = useState(false);
@@ -90,12 +91,12 @@ export default function PlantsScreen() {
   }, [router, fabScale]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.count}>{plants.length} plant{plants.length !== 1 ? 's' : ''} in your garden</Text>
+        <Text style={[styles.count, { color: colors.textSecondary }]}>{plants.length} plant{plants.length !== 1 ? 's' : ''} in your garden</Text>
         {plants.map((plant) => (
           <View key={plant.id}>
             <PlantCard plant={plant} onWater={handleWater} />
@@ -105,14 +106,14 @@ export default function PlantsScreen() {
                 onPress={() => toggleExpand(plant.id)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.needsToggleText}>
+                <Text style={[styles.needsToggleText, { color: colors.primary }]}>
                   {expandedId === plant.id ? 'Hide Care Guide' : 'View Care Guide'}
                 </Text>
                 <View style={[
                   styles.chevronWrap,
                   expandedId === plant.id && styles.chevronFlipped,
                 ]}>
-                  <ChevronDown size={14} color={Colors.primary} />
+                  <ChevronDown size={14} color={colors.primary} />
                 </View>
               </TouchableOpacity>
             )}
@@ -125,7 +126,7 @@ export default function PlantsScreen() {
       </ScrollView>
 
       <Animated.View style={[styles.fabContainer, { transform: [{ scale: fabScale }] }]}>
-        <TouchableOpacity style={styles.fab} onPress={handleFabPress} activeOpacity={0.85}>
+        <TouchableOpacity style={[styles.fab, { backgroundColor: colors.primary }]} onPress={handleFabPress} activeOpacity={0.85}>
           <Plus size={24} color="#fff" strokeWidth={2.5} />
         </TouchableOpacity>
       </Animated.View>
@@ -165,19 +166,20 @@ function OverwaterWarning({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { colors } = useSettings();
   return (
     <View style={owStyles.overlay}>
-      <View style={owStyles.card}>
+      <View style={[owStyles.card, { backgroundColor: colors.cardSolid }]}>
         <Text style={owStyles.emoji}>⚠️</Text>
-        <Text style={owStyles.title}>Are you sure?</Text>
-        <Text style={owStyles.message}>
+        <Text style={[owStyles.title, { color: colors.text }]}>Are you sure?</Text>
+        <Text style={[owStyles.message, { color: colors.textSecondary }]}>
           {plantName} was watered less than 24 hours ago. Overwatering can harm your plant.
         </Text>
         <View style={owStyles.actions}>
-          <TouchableOpacity style={owStyles.cancelBtn} onPress={onCancel} activeOpacity={0.8}>
-            <Text style={owStyles.cancelText}>Not Now</Text>
+          <TouchableOpacity style={[owStyles.cancelBtn, { backgroundColor: colors.background }]} onPress={onCancel} activeOpacity={0.8}>
+            <Text style={[owStyles.cancelText, { color: colors.textSecondary }]}>Not Now</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={owStyles.confirmBtn} onPress={onConfirm} activeOpacity={0.8}>
+          <TouchableOpacity style={[owStyles.confirmBtn, { backgroundColor: colors.warning }]} onPress={onConfirm} activeOpacity={0.8}>
             <Text style={owStyles.confirmText}>Water Anyway</Text>
           </TouchableOpacity>
         </View>
@@ -189,14 +191,13 @@ function OverwaterWarning({
 const owStyles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.overlay,
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
     zIndex: 100,
   },
   card: {
-    backgroundColor: Colors.cardSolid,
     borderRadius: 20,
     padding: 28,
     alignItems: 'center',
@@ -215,12 +216,10 @@ const owStyles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '600' as const,
-    color: Colors.text,
     marginBottom: 8,
   },
   message: {
     fontSize: 14,
-    color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 21,
     marginBottom: 24,
@@ -234,19 +233,16 @@ const owStyles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: Colors.background,
     alignItems: 'center',
   },
   cancelText: {
     fontSize: 15,
     fontWeight: '500' as const,
-    color: Colors.textSecondary,
   },
   confirmBtn: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: Colors.warning,
     alignItems: 'center',
   },
   confirmText: {
@@ -259,7 +255,6 @@ const owStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   content: {
     padding: 20,
@@ -267,7 +262,6 @@ const styles = StyleSheet.create({
   },
   count: {
     fontSize: 13,
-    color: Colors.textSecondary,
     marginBottom: 16,
   },
   needsToggle: {
@@ -282,7 +276,6 @@ const styles = StyleSheet.create({
   needsToggleText: {
     fontSize: 13,
     fontWeight: '500' as const,
-    color: Colors.primary,
   },
   chevronWrap: {
     transform: [{ rotate: '0deg' }],
@@ -299,12 +292,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: Colors.primary,
+        shadowColor: '#30D158',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 12,

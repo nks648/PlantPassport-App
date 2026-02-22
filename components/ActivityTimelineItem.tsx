@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Droplets, Heart, Leaf, Flame, Award, TrendingUp } from 'lucide-react-native';
-import Colors from '@/constants/colors';
+import { useSettings } from '@/providers/SettingsProvider';
 import { ActivityItem } from '@/types/plant';
 
 interface ActivityTimelineItemProps {
@@ -9,16 +9,18 @@ interface ActivityTimelineItemProps {
   isLast?: boolean;
 }
 
-const ICON_MAP = {
-  water: { icon: Droplets, color: Colors.accent },
-  health_check: { icon: Heart, color: Colors.error },
-  new_plant: { icon: Leaf, color: Colors.primary },
-  streak_milestone: { icon: Flame, color: Colors.streak },
-  badge_earned: { icon: Award, color: Colors.gold },
-  level_up: { icon: TrendingUp, color: Colors.xpPurple },
-};
-
 export default function ActivityTimelineItem({ item, isLast = false }: ActivityTimelineItemProps) {
+  const { colors } = useSettings();
+
+  const ICON_MAP = {
+    water: { icon: Droplets, color: colors.accent },
+    health_check: { icon: Heart, color: colors.error },
+    new_plant: { icon: Leaf, color: colors.primary },
+    streak_milestone: { icon: Flame, color: colors.streak },
+    badge_earned: { icon: Award, color: colors.gold },
+    level_up: { icon: TrendingUp, color: colors.xpPurple },
+  };
+
   const config = ICON_MAP[item.type] ?? ICON_MAP.water;
   const IconComponent = config.icon;
 
@@ -28,11 +30,11 @@ export default function ActivityTimelineItem({ item, isLast = false }: ActivityT
         <View style={[styles.iconCircle, { backgroundColor: config.color + '14' }]}>
           <IconComponent size={14} color={config.color} strokeWidth={1.8} />
         </View>
-        {!isLast && <View style={styles.line} />}
+        {!isLast && <View style={[styles.line, { backgroundColor: colors.divider }]} />}
       </View>
       <View style={styles.content}>
-        <Text style={styles.description}>{item.description}</Text>
-        <Text style={styles.date}>{item.date}</Text>
+        <Text style={[styles.description, { color: colors.text }]}>{item.description}</Text>
+        <Text style={[styles.date, { color: colors.textSecondary }]}>{item.date}</Text>
       </View>
     </View>
   );
@@ -58,7 +60,6 @@ const styles = StyleSheet.create({
   line: {
     flex: 1,
     width: 1,
-    backgroundColor: Colors.divider,
     marginVertical: 4,
   },
   content: {
@@ -68,11 +69,9 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 14,
     fontWeight: '400' as const,
-    color: Colors.text,
     marginBottom: 2,
   },
   date: {
     fontSize: 12,
-    color: Colors.textSecondary,
   },
 });

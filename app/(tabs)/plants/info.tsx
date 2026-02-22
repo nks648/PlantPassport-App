@@ -4,11 +4,11 @@ import { useLocalSearchParams, Stack } from 'expo-router';
 import { Droplets, Sun, Thermometer, Wrench, Sparkles, BookOpen, Leaf, CloudRain } from 'lucide-react-native';
 import { generateObject } from '@rork-ai/toolkit-sdk';
 import { z } from 'zod';
-import Colors from '@/constants/colors';
 import { usePlants } from '@/providers/PlantProvider';
+import { useSettings } from '@/providers/SettingsProvider';
 import { PlantNeeds } from '@/types/plant';
 import GlassCard from '@/components/GlassCard';
-import { shouldUseCelsius, formatTempRange, getTempBarValues } from '@/utils/temperature';
+import { formatTempRange, getTempBarValues } from '@/utils/temperature';
 
 const plantInfoSchema = z.object({
   careInstructions: z.array(z.string()).describe('Exactly 5 concise care instruction bullet points for this plant'),
@@ -23,7 +23,7 @@ const LIGHT_LABELS = ['', 'Low Light', 'Partial Shade', 'Indirect', 'Bright', 'F
 const HUMIDITY_LABELS = ['', 'Very Dry', 'Low', 'Average', 'Humid', 'Tropical'];
 const EASE_LABELS = ['', 'Expert', 'Advanced', 'Intermediate', 'Easy', 'Beginner'];
 
-function NeedBar({ level, color }: { level: number; color: string }) {
+function NeedBar({ level, color, inactiveColor }: { level: number; color: string; inactiveColor: string }) {
   return (
     <View style={styles.barTrack}>
       {[1, 2, 3, 4, 5].map((i) => (
@@ -32,7 +32,7 @@ function NeedBar({ level, color }: { level: number; color: string }) {
           style={[
             styles.barSegment,
             {
-              backgroundColor: i <= level ? color : 'rgba(0,0,0,0.05)',
+              backgroundColor: i <= level ? color : inactiveColor,
               opacity: i <= level ? 0.85 + i * 0.03 : 1,
             },
           ]}
@@ -43,7 +43,7 @@ function NeedBar({ level, color }: { level: number; color: string }) {
 }
 
 function NeedsSection({ needs }: { needs: PlantNeeds }) {
-  const useCelsius = shouldUseCelsius();
+  const { colors, useCelsius } = useSettings();
   const tempDisplay = formatTempRange(needs.idealTempMin, needs.idealTempMax, useCelsius);
   const tempBar = getTempBarValues(needs.idealTempMin, needs.idealTempMax, useCelsius);
   const scaleRange = tempBar.scaleMax - tempBar.scaleMin;
@@ -53,61 +53,61 @@ function NeedsSection({ needs }: { needs: PlantNeeds }) {
       <View style={styles.sectionInner}>
         <View style={styles.sectionHeader}>
           <View style={styles.sectionIconWrap}>
-            <Leaf size={16} color={Colors.primary} strokeWidth={1.8} />
+            <Leaf size={16} color={colors.primary} strokeWidth={1.8} />
           </View>
-          <Text style={styles.sectionTitle}>Plant Needs</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Plant Needs</Text>
         </View>
 
-        <View style={styles.needRow}>
+        <View style={[styles.needRow, { borderBottomColor: colors.divider }]}>
           <View style={[styles.iconWrap, { backgroundColor: 'rgba(0, 122, 255, 0.06)' }]}>
-            <Droplets size={15} color={Colors.waterBlue} strokeWidth={1.8} />
+            <Droplets size={15} color={colors.waterBlue} strokeWidth={1.8} />
           </View>
           <View style={styles.needContent}>
             <View style={styles.needHeader}>
-              <Text style={styles.needLabel}>Water</Text>
-              <Text style={styles.needValue}>{WATER_LABELS[needs.water]}</Text>
+              <Text style={[styles.needLabel, { color: colors.text }]}>Water</Text>
+              <Text style={[styles.needValue, { color: colors.textSecondary }]}>{WATER_LABELS[needs.water]}</Text>
             </View>
-            <NeedBar level={needs.water} color={Colors.waterBlue} />
+            <NeedBar level={needs.water} color={colors.waterBlue} inactiveColor={colors.inputBackground} />
           </View>
         </View>
 
-        <View style={styles.needRow}>
+        <View style={[styles.needRow, { borderBottomColor: colors.divider }]}>
           <View style={[styles.iconWrap, { backgroundColor: 'rgba(255, 159, 10, 0.06)' }]}>
-            <Sun size={15} color={Colors.accent} strokeWidth={1.8} />
+            <Sun size={15} color={colors.accent} strokeWidth={1.8} />
           </View>
           <View style={styles.needContent}>
             <View style={styles.needHeader}>
-              <Text style={styles.needLabel}>Light</Text>
-              <Text style={styles.needValue}>{LIGHT_LABELS[needs.light]}</Text>
+              <Text style={[styles.needLabel, { color: colors.text }]}>Light</Text>
+              <Text style={[styles.needValue, { color: colors.textSecondary }]}>{LIGHT_LABELS[needs.light]}</Text>
             </View>
-            <NeedBar level={needs.light} color={Colors.accent} />
+            <NeedBar level={needs.light} color={colors.accent} inactiveColor={colors.inputBackground} />
           </View>
         </View>
 
-        <View style={styles.needRow}>
+        <View style={[styles.needRow, { borderBottomColor: colors.divider }]}>
           <View style={[styles.iconWrap, { backgroundColor: 'rgba(48, 176, 199, 0.06)' }]}>
-            <CloudRain size={15} color={Colors.humidityTeal} strokeWidth={1.8} />
+            <CloudRain size={15} color={colors.humidityTeal} strokeWidth={1.8} />
           </View>
           <View style={styles.needContent}>
             <View style={styles.needHeader}>
-              <Text style={styles.needLabel}>Humidity</Text>
-              <Text style={styles.needValue}>{HUMIDITY_LABELS[needs.humidity]}</Text>
+              <Text style={[styles.needLabel, { color: colors.text }]}>Humidity</Text>
+              <Text style={[styles.needValue, { color: colors.textSecondary }]}>{HUMIDITY_LABELS[needs.humidity]}</Text>
             </View>
-            <NeedBar level={needs.humidity} color={Colors.humidityTeal} />
+            <NeedBar level={needs.humidity} color={colors.humidityTeal} inactiveColor={colors.inputBackground} />
           </View>
         </View>
 
-        <View style={styles.needRow}>
+        <View style={[styles.needRow, { borderBottomColor: colors.divider }]}>
           <View style={[styles.iconWrap, { backgroundColor: 'rgba(255, 59, 48, 0.06)' }]}>
             <Thermometer size={15} color="#FF6961" strokeWidth={1.8} />
           </View>
           <View style={styles.needContent}>
             <View style={styles.needHeader}>
-              <Text style={styles.needLabel}>Temperature</Text>
-              <Text style={styles.needValue}>{tempDisplay}</Text>
+              <Text style={[styles.needLabel, { color: colors.text }]}>Temperature</Text>
+              <Text style={[styles.needValue, { color: colors.textSecondary }]}>{tempDisplay}</Text>
             </View>
             <View style={styles.tempBar}>
-              <View style={styles.tempTrack}>
+              <View style={[styles.tempTrack, { backgroundColor: colors.inputBackground }]}>
                 <View
                   style={[
                     styles.tempRange,
@@ -119,8 +119,8 @@ function NeedsSection({ needs }: { needs: PlantNeeds }) {
                 />
               </View>
               <View style={styles.tempLabels}>
-                <Text style={styles.tempLabel}>{tempBar.scaleMin}{tempBar.unit}</Text>
-                <Text style={styles.tempLabel}>{tempBar.scaleMax}{tempBar.unit}</Text>
+                <Text style={[styles.tempLabel, { color: colors.textTertiary }]}>{tempBar.scaleMin}{tempBar.unit}</Text>
+                <Text style={[styles.tempLabel, { color: colors.textTertiary }]}>{tempBar.scaleMax}{tempBar.unit}</Text>
               </View>
             </View>
           </View>
@@ -128,14 +128,14 @@ function NeedsSection({ needs }: { needs: PlantNeeds }) {
 
         <View style={[styles.needRow, styles.lastRow]}>
           <View style={[styles.iconWrap, { backgroundColor: 'rgba(45, 157, 78, 0.06)' }]}>
-            <Wrench size={15} color={Colors.primary} strokeWidth={1.8} />
+            <Wrench size={15} color={colors.primary} strokeWidth={1.8} />
           </View>
           <View style={styles.needContent}>
             <View style={styles.needHeader}>
-              <Text style={styles.needLabel}>Ease of Care</Text>
-              <Text style={styles.needValue}>{EASE_LABELS[needs.easeOfCare]}</Text>
+              <Text style={[styles.needLabel, { color: colors.text }]}>Ease of Care</Text>
+              <Text style={[styles.needValue, { color: colors.textSecondary }]}>{EASE_LABELS[needs.easeOfCare]}</Text>
             </View>
-            <NeedBar level={needs.easeOfCare} color={Colors.primary} />
+            <NeedBar level={needs.easeOfCare} color={colors.primary} inactiveColor={colors.inputBackground} />
           </View>
         </View>
       </View>
@@ -144,26 +144,27 @@ function NeedsSection({ needs }: { needs: PlantNeeds }) {
 }
 
 function CareSection({ instructions, isLoading }: { instructions: string[]; isLoading: boolean }) {
+  const { colors } = useSettings();
   return (
     <GlassCard style={styles.sectionCard}>
       <View style={styles.sectionInner}>
         <View style={styles.sectionHeader}>
           <View style={[styles.sectionIconWrap, { backgroundColor: 'rgba(0, 122, 255, 0.06)' }]}>
-            <Sparkles size={16} color={Colors.waterBlue} strokeWidth={1.8} />
+            <Sparkles size={16} color={colors.waterBlue} strokeWidth={1.8} />
           </View>
-          <Text style={styles.sectionTitle}>Care Instructions</Text>
-          {isLoading && <ActivityIndicator size="small" color={Colors.primary} style={{ marginLeft: 8 }} />}
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Care Instructions</Text>
+          {isLoading && <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 8 }} />}
         </View>
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Generating care tips...</Text>
+            <Text style={[styles.loadingText, { color: colors.textTertiary }]}>Generating care tips...</Text>
           </View>
         ) : (
           instructions.map((instruction, i) => (
             <View key={i} style={[styles.bulletRow, i === instructions.length - 1 && styles.lastBullet]}>
-              <View style={[styles.bulletDot, { backgroundColor: getBulletColor(i) }]} />
-              <Text style={styles.bulletText}>{instruction}</Text>
+              <View style={[styles.bulletDot, { backgroundColor: getBulletColor(i, colors) }]} />
+              <Text style={[styles.bulletText, { color: colors.textSecondary }]}>{instruction}</Text>
             </View>
           ))
         )}
@@ -173,30 +174,31 @@ function CareSection({ instructions, isLoading }: { instructions: string[]; isLo
 }
 
 function AboutSection({ about, feedbackSummary, isLoading }: { about: string; feedbackSummary: string; isLoading: boolean }) {
+  const { colors } = useSettings();
   return (
     <GlassCard style={styles.sectionCard}>
       <View style={styles.sectionInner}>
         <View style={styles.sectionHeader}>
           <View style={[styles.sectionIconWrap, { backgroundColor: 'rgba(255, 159, 10, 0.06)' }]}>
-            <BookOpen size={16} color={Colors.accent} strokeWidth={1.8} />
+            <BookOpen size={16} color={colors.accent} strokeWidth={1.8} />
           </View>
-          <Text style={styles.sectionTitle}>About</Text>
-          {isLoading && <ActivityIndicator size="small" color={Colors.primary} style={{ marginLeft: 8 }} />}
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
+          {isLoading && <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 8 }} />}
         </View>
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Learning about this plant...</Text>
+            <Text style={[styles.loadingText, { color: colors.textTertiary }]}>Learning about this plant...</Text>
           </View>
         ) : (
           <>
-            <Text style={styles.aboutText}>{about}</Text>
+            <Text style={[styles.aboutText, { color: colors.textSecondary }]}>{about}</Text>
             {feedbackSummary ? (
               <View style={styles.feedbackContainer}>
-                <View style={styles.feedbackBar} />
+                <View style={[styles.feedbackBar, { backgroundColor: colors.primary }]} />
                 <View style={styles.feedbackContent}>
-                  <Text style={styles.feedbackLabel}>Your Observations</Text>
-                  <Text style={styles.feedbackText}>{feedbackSummary}</Text>
+                  <Text style={[styles.feedbackLabel, { color: colors.primary }]}>Your Observations</Text>
+                  <Text style={[styles.feedbackText, { color: colors.textSecondary }]}>{feedbackSummary}</Text>
                 </View>
               </View>
             ) : null}
@@ -207,14 +209,15 @@ function AboutSection({ about, feedbackSummary, isLoading }: { about: string; fe
   );
 }
 
-function getBulletColor(index: number): string {
-  const colors = [Colors.waterBlue, Colors.success, Colors.accent, '#FF6961', Colors.primary];
-  return colors[index % colors.length];
+function getBulletColor(index: number, colors: ReturnType<typeof useSettings>['colors']): string {
+  const bulletColors = [colors.waterBlue, colors.success, colors.accent, '#FF6961', colors.primary];
+  return bulletColors[index % bulletColors.length];
 }
 
 export default function PlantInfoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { plants, waterLogs } = usePlants();
+  const { colors } = useSettings();
   const plant = plants.find((p) => p.id === id);
 
   const [plantInfo, setPlantInfo] = useState<PlantInfo | null>(null);
@@ -288,22 +291,24 @@ Current plant status: Health ${plant.health}/5, Streak ${plant.streak} days, Wat
 
   if (!plant) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <Stack.Screen options={{ title: 'Plant Info' }} />
         <View style={styles.emptyState}>
-          <Leaf size={48} color={Colors.textTertiary} strokeWidth={1.5} />
-          <Text style={styles.emptyText}>Plant not found</Text>
+          <Leaf size={48} color={colors.textTertiary} strokeWidth={1.5} />
+          <Text style={[styles.emptyText, { color: colors.textTertiary }]}>Plant not found</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen
         options={{
           title: `${plant.name} Info`,
-          headerTitleStyle: { fontWeight: '600' as const, fontSize: 17, letterSpacing: -0.2 },
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
+          headerTitleStyle: { fontWeight: '600' as const, fontSize: 17, letterSpacing: -0.2, color: colors.text },
         }}
       />
 
@@ -315,8 +320,8 @@ Current plant status: Health ${plant.health}/5, Streak ${plant.streak} days, Wat
           <View style={styles.headerIcon}>
             <Text style={styles.headerEmoji}>🌱</Text>
           </View>
-          <Text style={styles.headerName}>{plant.name}</Text>
-          <Text style={styles.headerSpecies}>{plant.species}</Text>
+          <Text style={[styles.headerName, { color: colors.text }]}>{plant.name}</Text>
+          <Text style={[styles.headerSpecies, { color: colors.textSecondary }]}>{plant.species}</Text>
         </View>
 
         <NeedsSection needs={plant.needs} />
@@ -329,7 +334,7 @@ Current plant status: Health ${plant.health}/5, Streak ${plant.streak} days, Wat
 
         {error && (
           <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
           </View>
         )}
       </ScrollView>
@@ -340,7 +345,6 @@ Current plant status: Health ${plant.health}/5, Streak ${plant.streak} days, Wat
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   scrollContent: {
     padding: 20,
@@ -366,12 +370,10 @@ const styles = StyleSheet.create({
   headerName: {
     fontSize: 24,
     fontWeight: '700' as const,
-    color: Colors.text,
     letterSpacing: -0.3,
   },
   headerSpecies: {
     fontSize: 14,
-    color: Colors.textSecondary,
     fontStyle: 'italic' as const,
     marginTop: 2,
   },
@@ -399,7 +401,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: Colors.text,
   },
   needRow: {
     flexDirection: 'row' as const,
@@ -407,7 +408,6 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     marginBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.divider,
   },
   lastRow: {
     borderBottomWidth: 0,
@@ -435,12 +435,10 @@ const styles = StyleSheet.create({
   needLabel: {
     fontSize: 14,
     fontWeight: '500' as const,
-    color: Colors.text,
   },
   needValue: {
     fontSize: 12,
     fontWeight: '500' as const,
-    color: Colors.textSecondary,
   },
   barTrack: {
     flexDirection: 'row' as const,
@@ -458,7 +456,6 @@ const styles = StyleSheet.create({
   tempTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(0,0,0,0.05)',
     overflow: 'hidden' as const,
   },
   tempRange: {
@@ -475,7 +472,6 @@ const styles = StyleSheet.create({
   },
   tempLabel: {
     fontSize: 9,
-    color: Colors.textTertiary,
   },
   bulletRow: {
     flexDirection: 'row' as const,
@@ -494,13 +490,11 @@ const styles = StyleSheet.create({
   },
   bulletText: {
     fontSize: 14,
-    color: Colors.textSecondary,
     flex: 1,
     lineHeight: 20,
   },
   aboutText: {
     fontSize: 14,
-    color: Colors.textSecondary,
     lineHeight: 22,
     marginBottom: 16,
   },
@@ -514,7 +508,6 @@ const styles = StyleSheet.create({
   feedbackBar: {
     width: 3,
     borderRadius: 2,
-    backgroundColor: Colors.primary,
   },
   feedbackContent: {
     flex: 1,
@@ -522,14 +515,12 @@ const styles = StyleSheet.create({
   feedbackLabel: {
     fontSize: 11,
     fontWeight: '600' as const,
-    color: Colors.primary,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.6,
     marginBottom: 4,
   },
   feedbackText: {
     fontSize: 13,
-    color: Colors.textSecondary,
     lineHeight: 19,
     fontStyle: 'italic' as const,
   },
@@ -539,7 +530,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 13,
-    color: Colors.textTertiary,
     marginTop: 4,
   },
   errorBanner: {
@@ -550,7 +540,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 13,
-    color: Colors.error,
     textAlign: 'center' as const,
   },
   emptyState: {
@@ -561,6 +550,5 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: Colors.textTertiary,
   },
 });

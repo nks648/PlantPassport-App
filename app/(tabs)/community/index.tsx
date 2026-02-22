@@ -15,7 +15,6 @@ import {
 import { Image } from 'expo-image';
 import { Send, X, Trophy, Flame, Leaf, Users } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import Colors from '@/constants/colors';
 import { usePlants } from '@/providers/PlantProvider';
 import { useSettings } from '@/providers/SettingsProvider';
 import CommunityPostCard from '@/components/CommunityPostCard';
@@ -27,7 +26,7 @@ type TimeFilter = 'all-time' | 'weekly';
 
 export default function CommunityScreen() {
   const { communityPosts, toggleLike, addCommunityPost, plants } = usePlants();
-  const { t } = useSettings();
+  const { t, colors } = useSettings();
   const [activeTab, setActiveTab] = useState<ActiveTab>('community');
   const [composeVisible, setComposeVisible] = useState(false);
   const [composeText, setComposeText] = useState('');
@@ -70,31 +69,31 @@ export default function CommunityScreen() {
   const top3 = sorted.slice(0, 3);
   const rest = sorted.slice(3);
   const currentUser = sorted.find(e => e.isCurrentUser);
-  const medalColors = [Colors.gold, Colors.silver, Colors.bronze];
+  const medalColors = [colors.gold, colors.silver, colors.bronze];
 
   const getStreakValue = (entry: typeof sorted[0]) =>
     filter === 'weekly' ? (entry.weeklyStreak ?? 0) : entry.streak;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.segmentContainer}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.segmentContainer, { backgroundColor: colors.inputBackground }]}>
         <TouchableOpacity
-          style={[styles.segmentBtn, activeTab === 'community' && styles.segmentBtnActive]}
+          style={[styles.segmentBtn, activeTab === 'community' && [styles.segmentBtnActive, { backgroundColor: colors.primary }]]}
           onPress={() => handleTabChange('community')}
           activeOpacity={0.8}
         >
-          <Users size={16} color={activeTab === 'community' ? '#fff' : Colors.textSecondary} strokeWidth={1.8} />
-          <Text style={[styles.segmentText, activeTab === 'community' && styles.segmentTextActive]}>
+          <Users size={16} color={activeTab === 'community' ? '#fff' : colors.textSecondary} strokeWidth={1.8} />
+          <Text style={[styles.segmentText, { color: colors.textSecondary }, activeTab === 'community' && styles.segmentTextActive]}>
             {t('community')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.segmentBtn, activeTab === 'ranks' && styles.segmentBtnActive]}
+          style={[styles.segmentBtn, activeTab === 'ranks' && [styles.segmentBtnActive, { backgroundColor: colors.primary }]]}
           onPress={() => handleTabChange('ranks')}
           activeOpacity={0.8}
         >
-          <Trophy size={16} color={activeTab === 'ranks' ? '#fff' : Colors.textSecondary} strokeWidth={1.8} />
-          <Text style={[styles.segmentText, activeTab === 'ranks' && styles.segmentTextActive]}>
+          <Trophy size={16} color={activeTab === 'ranks' ? '#fff' : colors.textSecondary} strokeWidth={1.8} />
+          <Text style={[styles.segmentText, { color: colors.textSecondary }, activeTab === 'ranks' && styles.segmentTextActive]}>
             {t('ranks')}
           </Text>
         </TouchableOpacity>
@@ -105,7 +104,7 @@ export default function CommunityScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity style={styles.shareButton} onPress={handleOpenCompose} activeOpacity={0.8}>
+          <TouchableOpacity style={[styles.shareButton, { backgroundColor: colors.primary }]} onPress={handleOpenCompose} activeOpacity={0.8}>
             <Text style={styles.shareButtonText}>{t('shareYourWin')}</Text>
           </TouchableOpacity>
 
@@ -118,22 +117,22 @@ export default function CommunityScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.filterRow}>
+          <View style={[styles.filterRow, { backgroundColor: colors.inputBackground }]}>
             <TouchableOpacity
-              style={[styles.filterBtn, filter === 'all-time' && styles.filterBtnActive]}
+              style={[styles.filterBtn, filter === 'all-time' && [styles.filterBtnActive, { backgroundColor: colors.cardSolid }]]}
               onPress={() => handleFilterChange('all-time')}
               activeOpacity={0.8}
             >
-              <Text style={[styles.filterText, filter === 'all-time' && styles.filterTextActive]}>
+              <Text style={[styles.filterText, { color: colors.textSecondary }, filter === 'all-time' && { color: colors.text, fontWeight: '600' as const }]}>
                 {t('allTime')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.filterBtn, filter === 'weekly' && styles.filterBtnActive]}
+              style={[styles.filterBtn, filter === 'weekly' && [styles.filterBtnActive, { backgroundColor: colors.cardSolid }]]}
               onPress={() => handleFilterChange('weekly')}
               activeOpacity={0.8}
             >
-              <Text style={[styles.filterText, filter === 'weekly' && styles.filterTextActive]}>
+              <Text style={[styles.filterText, { color: colors.textSecondary }, filter === 'weekly' && { color: colors.text, fontWeight: '600' as const }]}>
                 {t('thisWeek')}
               </Text>
             </TouchableOpacity>
@@ -147,15 +146,15 @@ export default function CommunityScreen() {
               return (
                 <View key={entry.id} style={[styles.podiumItem, isFirst && styles.podiumFirst]}>
                   <View style={[styles.medalCircle, { borderColor: medalColors[idx] }]}>
-                    <Image source={{ uri: entry.avatar }} style={styles.podiumAvatar} />
+                    <Image source={{ uri: entry.avatar }} style={[styles.podiumAvatar, { backgroundColor: colors.divider }]} />
                     <View style={[styles.rankBadge, { backgroundColor: medalColors[idx] }]}>
                       <Text style={styles.rankBadgeText}>{entry.rank}</Text>
                     </View>
                   </View>
-                  <Text style={styles.podiumName} numberOfLines={1}>{entry.userName}</Text>
+                  <Text style={[styles.podiumName, { color: colors.text }]} numberOfLines={1}>{entry.userName}</Text>
                   <View style={styles.podiumStreakRow}>
-                    <Flame size={12} color={Colors.streak} strokeWidth={1.8} />
-                    <Text style={styles.podiumStreak}>{getStreakValue(entry)}</Text>
+                    <Flame size={12} color={colors.streak} strokeWidth={1.8} />
+                    <Text style={[styles.podiumStreak, { color: colors.text }]}>{getStreakValue(entry)}</Text>
                   </View>
                 </View>
               );
@@ -165,25 +164,25 @@ export default function CommunityScreen() {
           {rest.map((entry) => (
             <GlassCard
               key={entry.id}
-              style={[styles.listItem, entry.isCurrentUser && styles.listItemHighlight]}
+              style={[styles.listItem, entry.isCurrentUser && { backgroundColor: 'rgba(48, 209, 88, 0.04)', borderColor: 'rgba(48, 209, 88, 0.15)', borderWidth: 1 }]}
             >
-              <Text style={[styles.rank, entry.isCurrentUser && styles.rankHighlight]}>
+              <Text style={[styles.rank, { color: colors.textSecondary }, entry.isCurrentUser && { color: colors.primary }]}>
                 {entry.rank}
               </Text>
-              <Image source={{ uri: entry.avatar }} style={styles.listAvatar} />
+              <Image source={{ uri: entry.avatar }} style={[styles.listAvatar, { backgroundColor: colors.divider }]} />
               <View style={styles.listInfo}>
-                <Text style={[styles.listName, entry.isCurrentUser && styles.listNameHighlight]}>
+                <Text style={[styles.listName, { color: colors.text }, entry.isCurrentUser && { color: colors.primary, fontWeight: '600' as const }]}>
                   {entry.userName}
                   {entry.isCurrentUser ? ' (You)' : ''}
                 </Text>
                 <View style={styles.listMeta}>
-                  <Leaf size={11} color={Colors.textSecondary} strokeWidth={1.8} />
-                  <Text style={styles.listMetaText}>{entry.totalPlants} plants</Text>
+                  <Leaf size={11} color={colors.textSecondary} strokeWidth={1.8} />
+                  <Text style={[styles.listMetaText, { color: colors.textSecondary }]}>{entry.totalPlants} plants</Text>
                 </View>
               </View>
-              <View style={styles.listStreak}>
-                <Flame size={14} color={Colors.streak} strokeWidth={1.8} />
-                <Text style={styles.listStreakText}>{getStreakValue(entry)}</Text>
+              <View style={[styles.listStreak, { backgroundColor: colors.streakGlow }]}>
+                <Flame size={14} color={colors.streak} strokeWidth={1.8} />
+                <Text style={[styles.listStreakText, { color: colors.text }]}>{getStreakValue(entry)}</Text>
               </View>
             </GlassCard>
           ))}
@@ -191,25 +190,25 @@ export default function CommunityScreen() {
           {currentUser && currentUser.rank > 3 && (
             <View style={styles.pinnedSection}>
               <View style={styles.pinnedDivider}>
-                <View style={styles.pinnedLine} />
-                <Text style={styles.pinnedLabel}>Your Rank</Text>
-                <View style={styles.pinnedLine} />
+                <View style={[styles.pinnedLine, { backgroundColor: colors.divider }]} />
+                <Text style={[styles.pinnedLabel, { color: colors.textSecondary }]}>Your Rank</Text>
+                <View style={[styles.pinnedLine, { backgroundColor: colors.divider }]} />
               </View>
-              <GlassCard style={[styles.listItem, styles.listItemHighlight]}>
-                <Text style={[styles.rank, styles.rankHighlight]}>{currentUser.rank}</Text>
-                <Image source={{ uri: currentUser.avatar }} style={styles.listAvatar} />
+              <GlassCard style={[styles.listItem, { backgroundColor: 'rgba(48, 209, 88, 0.04)', borderColor: 'rgba(48, 209, 88, 0.15)', borderWidth: 1 }]}>
+                <Text style={[styles.rank, { color: colors.primary }]}>{currentUser.rank}</Text>
+                <Image source={{ uri: currentUser.avatar }} style={[styles.listAvatar, { backgroundColor: colors.divider }]} />
                 <View style={styles.listInfo}>
-                  <Text style={[styles.listName, styles.listNameHighlight]}>
+                  <Text style={[styles.listName, { color: colors.primary, fontWeight: '600' as const }]}>
                     {currentUser.userName} (You)
                   </Text>
                   <View style={styles.listMeta}>
-                    <Leaf size={11} color={Colors.textSecondary} strokeWidth={1.8} />
-                    <Text style={styles.listMetaText}>{currentUser.totalPlants} plants</Text>
+                    <Leaf size={11} color={colors.textSecondary} strokeWidth={1.8} />
+                    <Text style={[styles.listMetaText, { color: colors.textSecondary }]}>{currentUser.totalPlants} plants</Text>
                   </View>
                 </View>
-                <View style={styles.listStreak}>
-                  <Flame size={14} color={Colors.streak} strokeWidth={1.8} />
-                  <Text style={styles.listStreakText}>{getStreakValue(currentUser)}</Text>
+                <View style={[styles.listStreak, { backgroundColor: colors.streakGlow }]}>
+                  <Flame size={14} color={colors.streak} strokeWidth={1.8} />
+                  <Text style={[styles.listStreakText, { color: colors.text }]}>{getStreakValue(currentUser)}</Text>
                 </View>
               </GlassCard>
             </View>
@@ -241,6 +240,7 @@ function ComposeModal({
   onClose: () => void;
   onPost: () => void;
 }) {
+  const { colors } = useSettings();
   const slideAnim = useRef(new Animated.Value(400)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -267,33 +267,33 @@ function ComposeModal({
         <Animated.View style={[composeStyles.overlay, { opacity: fadeAnim }]}>
           <Pressable style={composeStyles.overlayPress} onPress={onClose} />
         </Animated.View>
-        <Animated.View style={[composeStyles.sheet, { transform: [{ translateY: slideAnim }] }]}>
-          <View style={composeStyles.handle} />
+        <Animated.View style={[composeStyles.sheet, { transform: [{ translateY: slideAnim }], backgroundColor: colors.cardSolid }]}>
+          <View style={[composeStyles.handle, { backgroundColor: colors.handleColor }]} />
           <View style={composeStyles.header}>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <X size={22} color={Colors.textSecondary} />
+              <X size={22} color={colors.textSecondary} />
             </TouchableOpacity>
-            <Text style={composeStyles.title}>New Post</Text>
+            <Text style={[composeStyles.title, { color: colors.text }]}>New Post</Text>
             <TouchableOpacity
               onPress={onPost}
               disabled={!text.trim()}
-              style={[composeStyles.postBtn, !text.trim() && composeStyles.postBtnDisabled]}
+              style={[composeStyles.postBtn, { backgroundColor: colors.primary }, !text.trim() && { backgroundColor: colors.inputBackground }]}
               activeOpacity={0.8}
             >
-              <Text style={[composeStyles.postBtnText, !text.trim() && composeStyles.postBtnTextDisabled]}>Post</Text>
+              <Text style={[composeStyles.postBtnText, !text.trim() && { color: colors.textTertiary }]}>Post</Text>
             </TouchableOpacity>
           </View>
           <TextInput
-            style={composeStyles.input}
+            style={[composeStyles.input, { backgroundColor: colors.inputBackground, color: colors.text }]}
             placeholder="Share your plant win with the community..."
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             value={text}
             onChangeText={onChangeText}
             multiline
             maxLength={280}
             autoFocus
           />
-          <Text style={composeStyles.charCount}>{text.length}/280</Text>
+          <Text style={[composeStyles.charCount, { color: colors.textTertiary }]}>{text.length}/280</Text>
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
@@ -307,13 +307,12 @@ const composeStyles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.overlay,
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   overlayPress: {
     flex: 1,
   },
   sheet: {
-    backgroundColor: Colors.cardSolid,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 24,
@@ -323,7 +322,6 @@ const composeStyles = StyleSheet.create({
   handle: {
     width: 36,
     height: 4,
-    backgroundColor: 'rgba(60, 60, 67, 0.1)',
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 16,
@@ -337,38 +335,27 @@ const composeStyles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontWeight: '600' as const,
-    color: Colors.text,
   },
   postBtn: {
-    backgroundColor: Colors.primary,
     paddingHorizontal: 18,
     paddingVertical: 8,
     borderRadius: 20,
-  },
-  postBtnDisabled: {
-    backgroundColor: 'rgba(60, 60, 67, 0.06)',
   },
   postBtnText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600' as const,
   },
-  postBtnTextDisabled: {
-    color: Colors.textTertiary,
-  },
   input: {
-    backgroundColor: Colors.background,
     borderRadius: 12,
     padding: 16,
     fontSize: 15,
-    color: Colors.text,
     minHeight: 120,
     textAlignVertical: 'top',
     lineHeight: 22,
   },
   charCount: {
     fontSize: 11,
-    color: Colors.textTertiary,
     textAlign: 'right',
     marginTop: 8,
   },
@@ -377,14 +364,12 @@ const composeStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   segmentContainer: {
     flexDirection: 'row',
     marginHorizontal: 20,
     marginTop: 8,
     marginBottom: 4,
-    backgroundColor: 'rgba(60, 60, 67, 0.06)',
     borderRadius: 12,
     padding: 3,
   },
@@ -398,10 +383,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   segmentBtnActive: {
-    backgroundColor: Colors.primary,
     ...Platform.select({
       ios: {
-        shadowColor: Colors.primary,
+        shadowColor: '#30D158',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
@@ -414,7 +398,6 @@ const styles = StyleSheet.create({
   segmentText: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: Colors.textSecondary,
   },
   segmentTextActive: {
     color: '#fff',
@@ -424,14 +407,13 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   shareButton: {
-    backgroundColor: Colors.primary,
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
     marginBottom: 20,
     ...Platform.select({
       ios: {
-        shadowColor: Colors.primary,
+        shadowColor: '#30D158',
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.25,
         shadowRadius: 8,
@@ -450,7 +432,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 4,
     marginBottom: 16,
-    backgroundColor: 'rgba(60, 60, 67, 0.05)',
     borderRadius: 10,
     padding: 2,
   },
@@ -461,7 +442,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   filterBtnActive: {
-    backgroundColor: Colors.cardSolid,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
@@ -471,11 +451,6 @@ const styles = StyleSheet.create({
   filterText: {
     fontSize: 14,
     fontWeight: '500' as const,
-    color: Colors.textSecondary,
-  },
-  filterTextActive: {
-    color: Colors.text,
-    fontWeight: '600' as const,
   },
   podium: {
     flexDirection: 'row',
@@ -502,7 +477,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.divider,
   },
   rankBadge: {
     position: 'absolute',
@@ -522,7 +496,6 @@ const styles = StyleSheet.create({
   podiumName: {
     fontSize: 12,
     fontWeight: '500' as const,
-    color: Colors.text,
     marginTop: 8,
     textAlign: 'center',
   },
@@ -535,7 +508,6 @@ const styles = StyleSheet.create({
   podiumStreak: {
     fontSize: 13,
     fontWeight: '600' as const,
-    color: Colors.text,
   },
   listItem: {
     flexDirection: 'row',
@@ -543,27 +515,17 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 8,
   },
-  listItemHighlight: {
-    backgroundColor: 'rgba(48, 209, 88, 0.04)',
-    borderColor: 'rgba(48, 209, 88, 0.15)',
-    borderWidth: 1,
-  },
   rank: {
     width: 28,
     fontSize: 15,
     fontWeight: '600' as const,
-    color: Colors.textSecondary,
     textAlign: 'center',
-  },
-  rankHighlight: {
-    color: Colors.primary,
   },
   listAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     marginLeft: 8,
-    backgroundColor: Colors.divider,
   },
   listInfo: {
     flex: 1,
@@ -572,11 +534,6 @@ const styles = StyleSheet.create({
   listName: {
     fontSize: 14,
     fontWeight: '500' as const,
-    color: Colors.text,
-  },
-  listNameHighlight: {
-    color: Colors.primary,
-    fontWeight: '600' as const,
   },
   listMeta: {
     flexDirection: 'row',
@@ -586,13 +543,11 @@ const styles = StyleSheet.create({
   },
   listMetaText: {
     fontSize: 12,
-    color: Colors.textSecondary,
   },
   listStreak: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Colors.streakGlow,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 12,
@@ -600,7 +555,6 @@ const styles = StyleSheet.create({
   listStreakText: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: Colors.text,
   },
   pinnedSection: {
     marginTop: 8,
@@ -614,11 +568,9 @@ const styles = StyleSheet.create({
   pinnedLine: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.divider,
   },
   pinnedLabel: {
     fontSize: 12,
     fontWeight: '500' as const,
-    color: Colors.textSecondary,
   },
 });

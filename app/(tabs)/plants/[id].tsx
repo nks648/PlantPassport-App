@@ -4,8 +4,8 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Droplets, Info, Calendar, Leaf, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import Colors from '@/constants/colors';
 import { usePlants } from '@/providers/PlantProvider';
+import { useSettings } from '@/providers/SettingsProvider';
 import StreakBadge from '@/components/StreakBadge';
 import HealthDots from '@/components/HealthDots';
 import GlassCard from '@/components/GlassCard';
@@ -18,6 +18,7 @@ import { Alert } from 'react-native';
 export default function PlantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { colors, isDark } = useSettings();
   const { plants, waterPlant, addCommunityPost, removePlant } = usePlants();
   const plant = plants.find((p) => p.id === id);
 
@@ -62,11 +63,11 @@ export default function PlantDetailScreen() {
 
   if (!plant) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <Stack.Screen options={{ title: 'Plant Not Found' }} />
         <View style={styles.emptyState}>
-          <Leaf size={48} color={Colors.textTertiary} strokeWidth={1.5} />
-          <Text style={styles.emptyText}>Plant not found</Text>
+          <Leaf size={48} color={colors.textTertiary} strokeWidth={1.5} />
+          <Text style={[styles.emptyText, { color: colors.textTertiary }]}>Plant not found</Text>
         </View>
       </View>
     );
@@ -82,11 +83,13 @@ export default function PlantDetailScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen
         options={{
           title: plant.name,
-          headerTitleStyle: { fontWeight: '600' as const, fontSize: 17, letterSpacing: -0.2 },
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
+          headerTitleStyle: { fontWeight: '600' as const, fontSize: 17, letterSpacing: -0.2, color: colors.text },
           headerRight: () => (
             <View style={styles.headerActions}>
               <TouchableOpacity
@@ -94,7 +97,7 @@ export default function PlantDetailScreen() {
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 style={styles.infoButton}
               >
-                <Info size={22} color={Colors.waterBlue} strokeWidth={1.8} />
+                <Info size={22} color={colors.waterBlue} strokeWidth={1.8} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
@@ -121,7 +124,7 @@ export default function PlantDetailScreen() {
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 style={styles.infoButton}
               >
-                <Trash2 size={20} color={Colors.error} strokeWidth={1.8} />
+                <Trash2 size={20} color={colors.error} strokeWidth={1.8} />
               </TouchableOpacity>
             </View>
           ),
@@ -140,28 +143,28 @@ export default function PlantDetailScreen() {
         </View>
 
         <View style={styles.infoSection}>
-          <Text style={styles.plantName}>{plant.name}</Text>
-          <Text style={styles.plantSpecies}>{plant.species}</Text>
+          <Text style={[styles.plantName, { color: colors.text }]}>{plant.name}</Text>
+          <Text style={[styles.plantSpecies, { color: colors.textSecondary }]}>{plant.species}</Text>
 
           <View style={styles.statsRow}>
             <GlassCard style={styles.statCard}>
               <View style={styles.statInner}>
-                <Text style={styles.statLabel}>Health</Text>
+                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>Health</Text>
                 <HealthDots health={plant.health} size={12} />
               </View>
             </GlassCard>
 
             <GlassCard style={styles.statCard}>
               <View style={styles.statInner}>
-                <Droplets size={14} color={Colors.waterBlue} strokeWidth={1.8} />
-                <Text style={styles.statValue}>{lastWateredText}</Text>
+                <Droplets size={14} color={colors.waterBlue} strokeWidth={1.8} />
+                <Text style={[styles.statValue, { color: colors.text }]}>{lastWateredText}</Text>
               </View>
             </GlassCard>
 
             <GlassCard style={styles.statCard}>
               <View style={styles.statInner}>
-                <Calendar size={14} color={Colors.primary} strokeWidth={1.8} />
-                <Text style={styles.statValue}>{daysSinceAdded}d owned</Text>
+                <Calendar size={14} color={colors.primary} strokeWidth={1.8} />
+                <Text style={[styles.statValue, { color: colors.text }]}>{daysSinceAdded}d owned</Text>
               </View>
             </GlassCard>
           </View>
@@ -169,11 +172,11 @@ export default function PlantDetailScreen() {
           {plant.notes.length > 0 && (
             <GlassCard style={styles.notesCard}>
               <View style={styles.notesInner}>
-                <Text style={styles.notesTitle}>Recent Notes</Text>
+                <Text style={[styles.notesTitle, { color: colors.text }]}>Recent Notes</Text>
                 {plant.notes.map((note, i) => (
                   <View key={i} style={styles.noteRow}>
-                    <View style={styles.noteDot} />
-                    <Text style={styles.noteText}>{note}</Text>
+                    <View style={[styles.noteDot, { backgroundColor: colors.primary }]} />
+                    <Text style={[styles.noteText, { color: colors.textSecondary }]}>{note}</Text>
                   </View>
                 ))}
               </View>
@@ -182,10 +185,10 @@ export default function PlantDetailScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { backgroundColor: colors.elevatedBackground, borderTopColor: colors.divider }]}>
         <Animated.View style={{ transform: [{ scale: waterAnim }], flex: 1 }}>
-          <TouchableOpacity style={styles.waterButton} onPress={handleWater} activeOpacity={0.8}>
-            <Droplets size={20} color={Colors.textLight} strokeWidth={2} />
+          <TouchableOpacity style={[styles.waterButton, { backgroundColor: colors.waterBlue }]} onPress={handleWater} activeOpacity={0.8}>
+            <Droplets size={20} color="#fff" strokeWidth={2} />
             <Text style={styles.waterButtonText}>Water {plant.name}</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -212,7 +215,6 @@ export default function PlantDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   content: {
     paddingBottom: 100,
@@ -236,12 +238,10 @@ const styles = StyleSheet.create({
   plantName: {
     fontSize: 28,
     fontWeight: '700' as const,
-    color: Colors.text,
     letterSpacing: -0.5,
   },
   plantSpecies: {
     fontSize: 15,
-    color: Colors.textSecondary,
     marginTop: 4,
     fontStyle: 'italic' as const,
   },
@@ -261,12 +261,10 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 11,
-    color: Colors.textTertiary,
     fontWeight: '500' as const,
   },
   statValue: {
     fontSize: 12,
-    color: Colors.text,
     fontWeight: '500' as const,
     textAlign: 'center' as const,
   },
@@ -280,7 +278,6 @@ const styles = StyleSheet.create({
   notesTitle: {
     fontSize: 15,
     fontWeight: '600' as const,
-    color: Colors.text,
     marginBottom: 12,
   },
   noteRow: {
@@ -293,11 +290,9 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.primary,
   },
   noteText: {
     fontSize: 14,
-    color: Colors.textSecondary,
     flex: 1,
   },
   bottomBar: {
@@ -307,16 +302,13 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 16,
     paddingBottom: 32,
-    backgroundColor: 'rgba(245, 245, 247, 0.95)',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.divider,
   },
   waterButton: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     gap: 10,
-    backgroundColor: Colors.waterBlue,
     paddingVertical: 16,
     borderRadius: 14,
     ...Platform.select({
@@ -332,7 +324,7 @@ const styles = StyleSheet.create({
     }),
   },
   waterButtonText: {
-    color: Colors.textLight,
+    color: '#fff',
     fontSize: 17,
     fontWeight: '600' as const,
   },
@@ -352,6 +344,5 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: Colors.textTertiary,
   },
 });

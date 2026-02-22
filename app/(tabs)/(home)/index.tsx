@@ -4,8 +4,8 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { Leaf, Flame, Plus, Droplets, ChevronRight, Zap } from 'lucide-react-native';
-import Colors from '@/constants/colors';
 import { usePlants } from '@/providers/PlantProvider';
+import { useSettings } from '@/providers/SettingsProvider';
 import { getRankForXP } from '@/types/plant';
 import GlassCard from '@/components/GlassCard';
 import WateringChart from '@/components/WateringChart';
@@ -13,6 +13,7 @@ import ActivityTimelineItem from '@/components/ActivityTimelineItem';
 import WeatherWidget from '@/components/WeatherWidget';
 
 export default function HomeScreen() {
+  const { colors } = useSettings();
   const {
     plants,
     activities,
@@ -36,7 +37,7 @@ export default function HomeScreen() {
     : 1;
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, { backgroundColor: colors.background }]}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -44,14 +45,14 @@ export default function HomeScreen() {
       >
         <View style={styles.headerRow}>
           <View style={styles.greetingSection}>
-            <Text style={styles.greeting}>{getGreeting()},</Text>
-            <Text style={styles.userName}>{userProfile.name.split(' ')[0]}</Text>
+            <Text style={[styles.greeting, { color: colors.textSecondary }]}>{getGreeting()},</Text>
+            <Text style={[styles.userName, { color: colors.text }]}>{userProfile.name.split(' ')[0]}</Text>
             <View style={styles.rankRow}>
               <Text style={styles.rankEmoji}>{rankInfo.emoji}</Text>
-              <Text style={styles.rankText}>{rankInfo.rank}</Text>
+              <Text style={[styles.rankText, { color: colors.textSecondary }]}>{rankInfo.rank}</Text>
               <View style={styles.xpBadge}>
-                <Zap size={10} color={Colors.accent} />
-                <Text style={styles.xpText}>{userProfile.xp} XP</Text>
+                <Zap size={10} color={colors.accent} />
+                <Text style={[styles.xpText, { color: colors.accent }]}>{userProfile.xp} XP</Text>
               </View>
             </View>
           </View>
@@ -60,10 +61,10 @@ export default function HomeScreen() {
 
         {rankInfo.xpToNext != null && (
           <View style={styles.xpBarContainer}>
-            <View style={styles.xpBarTrack}>
-              <Animated.View style={[styles.xpBarFill, { width: `${Math.min(xpProgress * 100, 100)}%` }]} />
+            <View style={[styles.xpBarTrack, { backgroundColor: colors.inputBackground }]}>
+              <Animated.View style={[styles.xpBarFill, { width: `${Math.min(xpProgress * 100, 100)}%`, backgroundColor: colors.accent }]} />
             </View>
-            <Text style={styles.xpToNext}>{rankInfo.xpToNext} XP to {rankInfo.nextRank}</Text>
+            <Text style={[styles.xpToNext, { color: colors.textSecondary }]}>{rankInfo.xpToNext} XP to {rankInfo.nextRank}</Text>
           </View>
         )}
 
@@ -77,12 +78,12 @@ export default function HomeScreen() {
             style={styles.statTouchable}
           >
             <GlassCard style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: Colors.primaryMuted }]}>
-                <Leaf size={18} color={Colors.primary} strokeWidth={1.8} />
+              <View style={[styles.statIcon, { backgroundColor: colors.primaryMuted }]}>
+                <Leaf size={18} color={colors.primary} strokeWidth={1.8} />
               </View>
-              <Text style={styles.statValue}>{plants.length}</Text>
-              <Text style={styles.statLabel}>My Plants</Text>
-              <ChevronRight size={12} color={Colors.textTertiary} style={styles.statChevron} />
+              <Text style={[styles.statValue, { color: colors.text }]}>{plants.length}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>My Plants</Text>
+              <ChevronRight size={12} color={colors.textTertiary} style={styles.statChevron} />
             </GlassCard>
           </TouchableOpacity>
           <TouchableOpacity
@@ -94,18 +95,18 @@ export default function HomeScreen() {
             style={styles.statTouchable}
           >
             <GlassCard style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: Colors.streakGlow }]}>
-                <Flame size={18} color={Colors.streak} strokeWidth={1.8} />
+              <View style={[styles.statIcon, { backgroundColor: colors.streakGlow }]}>
+                <Flame size={18} color={colors.streak} strokeWidth={1.8} />
               </View>
-              <Text style={styles.statValue}>{averageStreak}</Text>
-              <Text style={styles.statLabel}>Avg Streak</Text>
-              <ChevronRight size={12} color={Colors.textTertiary} style={styles.statChevron} />
+              <Text style={[styles.statValue, { color: colors.text }]}>{averageStreak}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Avg Streak</Text>
+              <ChevronRight size={12} color={colors.textTertiary} style={styles.statChevron} />
             </GlassCard>
           </TouchableOpacity>
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Weather & Care</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Weather & Care</Text>
         </View>
         <WeatherWidget />
 
@@ -114,8 +115,8 @@ export default function HomeScreen() {
         {plantsNeedingWater.length > 0 && (
           <>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Needs Attention</Text>
-              <View style={styles.taskCountBadge}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Needs Attention</Text>
+              <View style={[styles.taskCountBadge, { backgroundColor: colors.error }]}>
                 <Text style={styles.taskCountText}>{plantsNeedingWater.length}</Text>
               </View>
             </View>
@@ -129,18 +130,18 @@ export default function HomeScreen() {
                     key={plant.id}
                     style={[
                       styles.taskRow,
-                      index < plantsNeedingWater.length - 1 && styles.taskRowBorder,
+                      index < plantsNeedingWater.length - 1 && [styles.taskRowBorder, { borderBottomColor: colors.divider }],
                     ]}
                     onPress={() => router.push(`/plants/${plant.id}` as never)}
                     activeOpacity={0.7}
                   >
                     <Image source={{ uri: plant.image }} style={styles.taskPlantImage} />
                     <View style={styles.taskInfo}>
-                      <Text style={styles.taskPlantName}>{plant.name}</Text>
-                      <Text style={styles.taskDue}>Last watered {daysAgo}d ago</Text>
+                      <Text style={[styles.taskPlantName, { color: colors.text }]}>{plant.name}</Text>
+                      <Text style={[styles.taskDue, { color: colors.warning }]}>Last watered {daysAgo}d ago</Text>
                     </View>
                     <View style={styles.taskAction}>
-                      <Droplets size={14} color={Colors.accent} strokeWidth={1.8} />
+                      <Droplets size={14} color={colors.accent} strokeWidth={1.8} />
                     </View>
                   </TouchableOpacity>
                 );
@@ -150,7 +151,7 @@ export default function HomeScreen() {
         )}
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Activity</Text>
         </View>
         <GlassCard style={styles.activityCard}>
           {activities.slice(0, 6).map((item, index) => (
@@ -171,6 +172,7 @@ export default function HomeScreen() {
 }
 
 function ScanFab() {
+  const { colors } = useSettings();
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -185,7 +187,7 @@ function ScanFab() {
 
   return (
     <Animated.View style={[styles.fabContainer, { transform: [{ scale: scaleAnim }] }]}>
-      <TouchableOpacity style={styles.fab} onPress={handlePress} activeOpacity={0.85}>
+      <TouchableOpacity style={[styles.fab, { backgroundColor: colors.primary }]} onPress={handlePress} activeOpacity={0.85}>
         <Plus size={24} color="#fff" strokeWidth={2.5} />
       </TouchableOpacity>
     </Animated.View>
@@ -195,7 +197,6 @@ function ScanFab() {
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   container: {
     flex: 1,
@@ -216,13 +217,11 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 15,
     fontWeight: '400' as const,
-    color: Colors.textSecondary,
     letterSpacing: -0.2,
   },
   userName: {
     fontSize: 30,
     fontWeight: '700' as const,
-    color: Colors.text,
     letterSpacing: -0.6,
     marginBottom: 8,
   },
@@ -237,7 +236,6 @@ const styles = StyleSheet.create({
   rankText: {
     fontSize: 14,
     fontWeight: '500' as const,
-    color: Colors.textSecondary,
   },
   xpBadge: {
     flexDirection: 'row',
@@ -251,7 +249,6 @@ const styles = StyleSheet.create({
   xpText: {
     fontSize: 11,
     fontWeight: '600' as const,
-    color: Colors.accent,
   },
   avatar: {
     width: 48,
@@ -266,18 +263,15 @@ const styles = StyleSheet.create({
   },
   xpBarTrack: {
     height: 4,
-    backgroundColor: 'rgba(60, 60, 67, 0.06)',
     borderRadius: 2,
     overflow: 'hidden',
   },
   xpBarFill: {
     height: 4,
-    backgroundColor: Colors.accent,
     borderRadius: 2,
   },
   xpToNext: {
     fontSize: 11,
-    color: Colors.textSecondary,
     marginTop: 4,
     textAlign: 'right',
   },
@@ -305,12 +299,10 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 28,
     fontWeight: '700' as const,
-    color: Colors.text,
     letterSpacing: -0.5,
   },
   statLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
     marginTop: 2,
     fontWeight: '400' as const,
   },
@@ -329,11 +321,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600' as const,
-    color: Colors.text,
     letterSpacing: -0.4,
   },
   taskCountBadge: {
-    backgroundColor: Colors.error,
     width: 22,
     height: 22,
     borderRadius: 11,
@@ -355,7 +345,6 @@ const styles = StyleSheet.create({
   },
   taskRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.divider,
   },
   taskPlantImage: {
     width: 44,
@@ -369,11 +358,9 @@ const styles = StyleSheet.create({
   taskPlantName: {
     fontSize: 15,
     fontWeight: '600' as const,
-    color: Colors.text,
   },
   taskDue: {
     fontSize: 13,
-    color: Colors.warning,
     marginTop: 2,
   },
   taskAction: {
@@ -396,12 +383,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: Colors.primary,
+        shadowColor: '#30D158',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 12,

@@ -14,8 +14,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Plus, ArrowLeft, Leaf, RefreshCw, Check, Info } from 'lucide-react-native';
-import Colors from '@/constants/colors';
 import { usePlants } from '@/providers/PlantProvider';
+import { useSettings } from '@/providers/SettingsProvider';
 import { Plant } from '@/types/plant';
 
 interface PossibleMatch {
@@ -25,6 +25,7 @@ interface PossibleMatch {
 }
 
 function ConfidenceMeter({ confidence }: { confidence: number }) {
+  const { colors } = useSettings();
   const fillAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -37,9 +38,9 @@ function ConfidenceMeter({ confidence }: { confidence: number }) {
   }, [confidence, fillAnim]);
 
   const getColor = () => {
-    if (confidence >= 70) return Colors.primary;
-    if (confidence >= 40) return Colors.warning;
-    return Colors.error;
+    if (confidence >= 70) return colors.primary;
+    if (confidence >= 40) return colors.warning;
+    return colors.error;
   };
 
   const getLabel = () => {
@@ -59,7 +60,7 @@ function ConfidenceMeter({ confidence }: { confidence: number }) {
         </View>
         <Text style={[styles.confidencePercent, { color }]}>{confidence}%</Text>
       </View>
-      <View style={styles.confidenceTrack}>
+      <View style={[styles.confidenceTrack, { backgroundColor: colors.inputBackground }]}>
         <Animated.View
           style={[
             styles.confidenceFill,
@@ -78,23 +79,25 @@ function ConfidenceMeter({ confidence }: { confidence: number }) {
 }
 
 function MatchItem({ match, index }: { match: PossibleMatch; index: number }) {
+  const { colors } = useSettings();
   const conf = Math.round(match.confidence * 100);
   return (
-    <View style={styles.matchItem}>
-      <View style={styles.matchRank}>
-        <Text style={styles.matchRankText}>{index + 1}</Text>
+    <View style={[styles.matchItem, { backgroundColor: colors.background }]}>
+      <View style={[styles.matchRank, { backgroundColor: colors.primaryMuted }]}>
+        <Text style={[styles.matchRankText, { color: colors.primary }]}>{index + 1}</Text>
       </View>
       <View style={styles.matchInfo}>
-        <Text style={styles.matchName}>{match.commonName}</Text>
-        <Text style={styles.matchSpecies}>{match.scientificName}</Text>
+        <Text style={[styles.matchName, { color: colors.text }]}>{match.commonName}</Text>
+        <Text style={[styles.matchSpecies, { color: colors.textSecondary }]}>{match.scientificName}</Text>
       </View>
-      <Text style={styles.matchConfidence}>{conf}%</Text>
+      <Text style={[styles.matchConfidence, { color: colors.textSecondary }]}>{conf}%</Text>
     </View>
   );
 }
 
 export default function ScanResultScreen() {
   const router = useRouter();
+  const { colors } = useSettings();
   const params = useLocalSearchParams<{
     name: string;
     species: string;
@@ -181,7 +184,7 @@ export default function ScanResultScreen() {
   }, [router]);
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <View style={styles.imageContainer}>
@@ -191,38 +194,38 @@ export default function ScanResultScreen() {
               <ArrowLeft size={20} color="#fff" strokeWidth={2} />
             </TouchableOpacity>
             <View style={styles.imageLabel}>
-              <View style={styles.identifiedBadge}>
+              <View style={[styles.identifiedBadge, { backgroundColor: colors.primary }]}>
                 <Leaf size={14} color="#fff" strokeWidth={2} />
                 <Text style={styles.identifiedText}>Identified</Text>
               </View>
             </View>
           </View>
 
-          <Animated.View style={[styles.contentCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Text style={styles.plantName}>{params.name || 'Unknown Plant'}</Text>
-            <Text style={styles.plantSpecies}>{params.species || 'Unknown Species'}</Text>
+          <Animated.View style={[styles.contentCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }], backgroundColor: colors.cardSolid }]}>
+            <Text style={[styles.plantName, { color: colors.text }]}>{params.name || 'Unknown Plant'}</Text>
+            <Text style={[styles.plantSpecies, { color: colors.textSecondary }]}>{params.species || 'Unknown Species'}</Text>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.divider }]} />
 
             <ConfidenceMeter confidence={confidence} />
 
             {notes ? (
               <>
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: colors.divider }]} />
                 <View style={styles.notesSection}>
                   <View style={styles.notesTitleRow}>
-                    <Info size={16} color={Colors.accent} strokeWidth={2} />
-                    <Text style={styles.sectionTitle}>NOTES</Text>
+                    <Info size={16} color={colors.accent} strokeWidth={2} />
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>NOTES</Text>
                   </View>
-                  <Text style={styles.notesText}>{notes}</Text>
+                  <Text style={[styles.notesText, { color: colors.text }]}>{notes}</Text>
                 </View>
               </>
             ) : null}
 
             {possibleMatches.length > 0 ? (
               <>
-                <View style={styles.divider} />
-                <Text style={styles.sectionTitle}>POSSIBLE MATCHES</Text>
+                <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+                <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>POSSIBLE MATCHES</Text>
                 <View style={styles.matchesList}>
                   {possibleMatches.map((match, index) => (
                     <MatchItem key={`${match.scientificName}-${index}`} match={match} index={index} />
@@ -233,9 +236,9 @@ export default function ScanResultScreen() {
           </Animated.View>
 
           <View style={styles.scanAgainContainer}>
-            <TouchableOpacity style={styles.scanAgainButton} onPress={handleScanAgain} activeOpacity={0.8}>
-              <RefreshCw size={18} color={Colors.primary} strokeWidth={2} />
-              <Text style={styles.scanAgainText}>Scan Again</Text>
+            <TouchableOpacity style={[styles.scanAgainButton, { backgroundColor: colors.cardSolid, borderColor: colors.divider }]} onPress={handleScanAgain} activeOpacity={0.8}>
+              <RefreshCw size={18} color={colors.primary} strokeWidth={2} />
+              <Text style={[styles.scanAgainText, { color: colors.primary }]}>Scan Again</Text>
             </TouchableOpacity>
           </View>
 
@@ -243,8 +246,8 @@ export default function ScanResultScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      <SafeAreaView edges={['bottom']} style={styles.bottomBar}>
-        <TouchableOpacity style={styles.addButton} onPress={handleAddPlant} activeOpacity={0.85}>
+      <SafeAreaView edges={['bottom']} style={[styles.bottomBar, { backgroundColor: colors.elevatedBackground, borderTopColor: colors.divider }]}>
+        <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.primary }]} onPress={handleAddPlant} activeOpacity={0.85}>
           <Plus size={20} color="#fff" strokeWidth={2.5} />
           <Text style={styles.addButtonText}>Add to My Plants</Text>
         </TouchableOpacity>
@@ -254,260 +257,44 @@ export default function ScanResultScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  imageContainer: {
-    position: 'relative',
-    height: 300,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
-  imageOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-    backgroundColor: 'transparent',
-  },
-  backBtn: {
-    position: 'absolute',
-    top: 12,
-    left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  imageLabel: {
-    position: 'absolute',
-    bottom: 16,
-    left: 16,
-  },
-  identifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  identifiedText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600' as const,
-  },
-  contentCard: {
-    marginHorizontal: 16,
-    marginTop: -32,
-    backgroundColor: Colors.cardSolid,
-    borderRadius: 20,
-    padding: 24,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 6,
-      },
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-      },
-    }),
-  },
-  plantName: {
-    fontSize: 26,
-    fontWeight: '700' as const,
-    color: Colors.text,
-    marginBottom: 2,
-    letterSpacing: -0.5,
-  },
-  plantSpecies: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
-    marginBottom: 4,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.divider,
-    marginVertical: 20,
-  },
-  confidenceContainer: {
-    gap: 10,
-  },
-  confidenceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  confidenceLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  confidenceLabel: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-  },
-  confidencePercent: {
-    fontSize: 22,
-    fontWeight: '700' as const,
-  },
-  confidenceTrack: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(60, 60, 67, 0.05)',
-    overflow: 'hidden',
-  },
-  confidenceFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  notesSection: {
-    gap: 8,
-  },
-  notesTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: Colors.textSecondary,
-    letterSpacing: 1,
-  },
-  notesText: {
-    fontSize: 15,
-    color: Colors.text,
-    lineHeight: 22,
-  },
-  matchesList: {
-    marginTop: 12,
-    gap: 10,
-  },
-  matchItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-    borderRadius: 12,
-    padding: 12,
-    gap: 12,
-  },
-  matchRank: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  matchRankText: {
-    fontSize: 13,
-    fontWeight: '700' as const,
-    color: Colors.primary,
-  },
-  matchInfo: {
-    flex: 1,
-  },
-  matchName: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: Colors.text,
-  },
-  matchSpecies: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  matchConfidence: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: Colors.textSecondary,
-  },
-  scanAgainContainer: {
-    paddingHorizontal: 16,
-    marginTop: 16,
-  },
-  scanAgainButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Colors.cardSolid,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-  },
-  scanAgainText: {
-    fontSize: 16,
-    fontWeight: '500' as const,
-    color: Colors.primary,
-  },
-  bottomPad: {
-    height: 100,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(242, 242, 247, 0.95)',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.divider,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 14,
-    ...Platform.select({
-      ios: {
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-      default: {
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-      },
-    }),
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600' as const,
-  },
+  root: { flex: 1 },
+  safeArea: { flex: 1 },
+  scrollContent: { paddingBottom: 20 },
+  imageContainer: { position: 'relative', height: 300 },
+  heroImage: { width: '100%', height: '100%' },
+  imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 100, backgroundColor: 'transparent' },
+  backBtn: { position: 'absolute', top: 12, left: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' },
+  imageLabel: { position: 'absolute', bottom: 16, left: 16 },
+  identifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  identifiedText: { color: '#fff', fontSize: 13, fontWeight: '600' as const },
+  contentCard: { marginHorizontal: 16, marginTop: -32, borderRadius: 20, padding: 24, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16 }, android: { elevation: 6 }, default: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16 } }) },
+  plantName: { fontSize: 26, fontWeight: '700' as const, marginBottom: 2, letterSpacing: -0.5 },
+  plantSpecies: { fontSize: 15, fontStyle: 'italic' as const, marginBottom: 4 },
+  divider: { height: StyleSheet.hairlineWidth, marginVertical: 20 },
+  confidenceContainer: { gap: 10 },
+  confidenceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  confidenceLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  confidenceLabel: { fontSize: 14, fontWeight: '600' as const },
+  confidencePercent: { fontSize: 22, fontWeight: '700' as const },
+  confidenceTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  confidenceFill: { height: '100%', borderRadius: 4 },
+  notesSection: { gap: 8 },
+  notesTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sectionTitle: { fontSize: 12, fontWeight: '600' as const, letterSpacing: 1 },
+  notesText: { fontSize: 15, lineHeight: 22 },
+  matchesList: { marginTop: 12, gap: 10 },
+  matchItem: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, padding: 12, gap: 12 },
+  matchRank: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  matchRankText: { fontSize: 13, fontWeight: '700' as const },
+  matchInfo: { flex: 1 },
+  matchName: { fontSize: 14, fontWeight: '600' as const },
+  matchSpecies: { fontSize: 12, fontStyle: 'italic' as const },
+  matchConfidence: { fontSize: 14, fontWeight: '600' as const },
+  scanAgainContainer: { paddingHorizontal: 16, marginTop: 16 },
+  scanAgainButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1 },
+  scanAgainText: { fontSize: 16, fontWeight: '500' as const },
+  bottomPad: { height: 100 },
+  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20, paddingTop: 12 },
+  addButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, borderRadius: 14, ...Platform.select({ ios: { shadowColor: '#30D158', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 8 }, android: { elevation: 4 }, default: { shadowColor: '#30D158', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 8 } }) },
+  addButtonText: { color: '#fff', fontSize: 17, fontWeight: '600' as const },
 });

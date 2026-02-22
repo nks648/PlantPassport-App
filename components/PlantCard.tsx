@@ -1,10 +1,10 @@
 import React, { useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import { Droplets } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import Colors from '@/constants/colors';
+import { useSettings } from '@/providers/SettingsProvider';
 import { Plant } from '@/types/plant';
 import GlassCard from './GlassCard';
 import StreakBadge from './StreakBadge';
@@ -16,6 +16,7 @@ interface PlantCardProps {
 }
 
 export default React.memo(function PlantCard({ plant, onWater }: PlantCardProps) {
+  const { colors } = useSettings();
   const router = useRouter();
   const pressAnim = useRef(new Animated.Value(1)).current;
   const waterAnim = useRef(new Animated.Value(1)).current;
@@ -60,22 +61,22 @@ export default React.memo(function PlantCard({ plant, onWater }: PlantCardProps)
           <View style={styles.content}>
             <View style={styles.topRow}>
               <View style={styles.nameSection}>
-                <Text style={styles.name} numberOfLines={1}>{plant.name}</Text>
-                <Text style={styles.species} numberOfLines={1}>{plant.species}</Text>
+                <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{plant.name}</Text>
+                <Text style={[styles.species, { color: colors.textSecondary }]} numberOfLines={1}>{plant.species}</Text>
               </View>
               <StreakBadge streak={plant.streak} size="small" />
             </View>
             <View style={styles.middleRow}>
               <HealthDots health={plant.health} />
-              <Text style={styles.wateredText}>{lastWateredText}</Text>
+              <Text style={[styles.wateredText, { color: colors.textSecondary }]}>{lastWateredText}</Text>
             </View>
             <Animated.View style={{ transform: [{ scale: waterAnim }] }}>
               <TouchableOpacity
-                style={styles.waterButton}
+                style={[styles.waterButton, { backgroundColor: colors.accent }]}
                 onPress={handleWater}
                 activeOpacity={0.8}
               >
-                <Droplets size={15} color={Colors.textLight} strokeWidth={2} />
+                <Droplets size={15} color="#fff" strokeWidth={2} />
                 <Text style={styles.waterButtonText}>Water</Text>
               </TouchableOpacity>
             </Animated.View>
@@ -113,12 +114,10 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: Colors.text,
     letterSpacing: -0.2,
   },
   species: {
     fontSize: 12,
-    color: Colors.textSecondary,
     marginTop: 2,
   },
   middleRow: {
@@ -128,20 +127,18 @@ const styles = StyleSheet.create({
   },
   wateredText: {
     fontSize: 12,
-    color: Colors.textSecondary,
   },
   waterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: Colors.accent,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
   },
   waterButtonText: {
-    color: Colors.textLight,
+    color: '#fff',
     fontSize: 14,
     fontWeight: '600' as const,
   },

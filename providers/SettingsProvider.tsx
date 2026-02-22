@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery } from '@tanstack/react-query';
 import { useColorScheme } from 'react-native';
 import createContextHook from '@nkzw/create-context-hook';
+import { LightColors, DarkColors, ThemeColors } from '@/constants/colors';
 
 export type TemperatureUnit = 'celsius' | 'fahrenheit' | 'auto';
 export type AppLanguage = 'en' | 'es' | 'pt';
@@ -59,6 +60,10 @@ export const [SettingsProvider, useSettings] = createContextHook(() => {
     if (settings.themeMode === 'light') return false;
     return systemScheme === 'dark';
   }, [settings.themeMode, systemScheme]);
+
+  const colors: ThemeColors = useMemo(() => {
+    return isDark ? DarkColors : LightColors;
+  }, [isDark]);
 
   const useCelsius = useMemo(() => {
     if (settings.temperatureUnit === 'celsius') return true;
@@ -182,6 +187,7 @@ export const [SettingsProvider, useSettings] = createContextHook(() => {
     settings,
     updateSettings,
     isDark,
+    colors,
     useCelsius,
     t,
     isLoading: settingsQuery.isLoading,

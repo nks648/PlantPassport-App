@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import Colors from '@/constants/colors';
+import { useSettings } from '@/providers/SettingsProvider';
 
 interface HealthDotsProps {
   health: number;
@@ -10,13 +10,14 @@ interface HealthDotsProps {
 }
 
 export default function HealthDots({ health, interactive = false, onSelect, size = 10 }: HealthDotsProps) {
+  const { colors } = useSettings();
   const dots = [1, 2, 3, 4, 5];
 
   const getColor = (index: number, filled: boolean) => {
-    if (!filled) return 'rgba(60, 60, 67, 0.08)';
-    if (index <= 2) return Colors.error;
-    if (index <= 3) return Colors.warning;
-    return Colors.success;
+    if (!filled) return colors.inputBackground;
+    if (index <= 2) return colors.error;
+    if (index <= 3) return colors.warning;
+    return colors.success;
   };
 
   return (

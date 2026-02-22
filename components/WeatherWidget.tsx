@@ -1,17 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Platform, Animated } from 'react-native';
 import { CloudSun, Thermometer, Droplets, Wind, AlertTriangle } from 'lucide-react-native';
-import Colors from '@/constants/colors';
+import { useSettings } from '@/providers/SettingsProvider';
 import GlassCard from '@/components/GlassCard';
 
 interface WeatherData {
-  temp: number;
+  tempC: number;
   humidity: number;
   description: string;
   city: string;
-  windSpeed: number;
-  useCelsius: boolean;
-  forecast: { day: string; high: number; low: number; condition: string }[];
+  windSpeedKmh: number;
+  forecast: { day: string; highC: number; lowC: number; condition: string }[];
 }
 
 interface CareHint {
@@ -19,19 +18,17 @@ interface CareHint {
   type: 'warning' | 'info' | 'tip';
 }
 
-function toComparableF(temp: number, useCelsius: boolean): number {
-  return useCelsius ? temp * 9 / 5 + 32 : temp;
+function cToF(c: number): number {
+  return Math.round(c * 9 / 5 + 32);
 }
 
 function generateCareHints(weather: WeatherData): CareHint[] {
   const hints: CareHint[] = [];
-  const avgHighNext = weather.forecast.reduce((s, f) => s + f.high, 0) / Math.max(weather.forecast.length, 1);
-  const avgHighF = toComparableF(avgHighNext, weather.useCelsius);
-  const tempF = toComparableF(weather.temp, weather.useCelsius);
+  const avgHighC = weather.forecast.reduce((s, f) => s + f.highC, 0) / Math.max(weather.forecast.length, 1);
 
-  if (avgHighF > 85) {
+  if (avgHighC > 30) {
     hints.push({ message: 'Hot days ahead — water your plants more frequently and move sensitive ones away from direct sun.', type: 'warning' });
-  } else if (avgHighF > 75) {
+  } else if (avgHighC > 24) {
     hints.push({ message: 'Warm week coming up. Check soil moisture daily and mist humidity-loving plants.', type: 'tip' });
   }
 
@@ -41,11 +38,11 @@ function generateCareHints(weather: WeatherData): CareHint[] {
     hints.push({ message: 'High humidity — reduce watering for succulents and watch for fungal issues.', type: 'info' });
   }
 
-  if (tempF < 50) {
+  if (weather.tempC < 10) {
     hints.push({ message: 'Cold snap! Move tropical plants away from windows and reduce watering.', type: 'warning' });
   }
 
-  if (weather.windSpeed > (weather.useCelsius ? 24 : 15)) {
+  if (weather.windSpeedKmh > 24) {
     hints.push({ message: 'Windy conditions. Secure outdoor plants and check for drying soil.', type: 'tip' });
   }
 
@@ -56,28 +53,19 @@ function generateCareHints(weather: WeatherData): CareHint[] {
   return hints;
 }
 
-const US_COUNTRY_CODES = ['us', 'usa', 'united states', 'united states of america'];
-const IMPERIAL_COUNTRIES = ['us', 'usa', 'united states', 'united states of america', 'mm', 'myanmar', 'lr', 'liberia', 'bs', 'bahamas', 'ky', 'cayman islands', 'pw', 'palau', 'mh', 'marshall islands'];
-
-function shouldUseCelsius(countryCode?: string): boolean {
-  if (!countryCode) return true;
-  return !IMPERIAL_COUNTRIES.includes(countryCode.toLowerCase());
-}
-
 function getFallbackWeather(): WeatherData {
   return {
-    temp: 22,
+    tempC: 22,
     humidity: 55,
     description: 'Partly Cloudy',
     city: 'Your Area',
-    windSpeed: 13,
-    useCelsius: true,
+    windSpeedKmh: 13,
     forecast: [
-      { day: 'Mon', high: 26, low: 17, condition: 'sunny' },
-      { day: 'Tue', high: 28, low: 18, condition: 'partly_cloudy' },
-      { day: 'Wed', high: 29, low: 20, condition: 'sunny' },
-      { day: 'Thu', high: 27, low: 18, condition: 'cloudy' },
-      { day: 'Fri', high: 24, low: 16, condition: 'rain' },
+      { day: 'Mon', highC: 26, lowC: 17, condition: 'sunny' },
+      { day: 'Tue', highC: 28, lowC: 18, condition: 'partly_cloudy' },
+      { day: 'Wed', highC: 29, lowC: 20, condition: 'sunny' },
+      { day: 'Thu', highC: 27, lowC: 18, condition: 'cloudy' },
+      { day: 'Fri', highC: 24, lowC: 16, condition: 'rain' },
     ],
   };
 }
@@ -94,6 +82,7 @@ function getConditionEmoji(condition: string): string {
 }
 
 export default function WeatherWidget() {
+  const { colors, useCelsius } = useSettings();
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const pulseAnim = useRef(new Animated.Value(0)).current;
@@ -157,22 +146,16 @@ export default function WeatherWidget() {
   const fetchWeatherByCoords = async (lat: number, lon: number) => {
     try {
       let cityName = 'Your Area';
-      let countryCode = '';
       try {
         const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`);
         const geoData = await geoRes.json();
         cityName = geoData.address?.city || geoData.address?.town || geoData.address?.village || 'Your Area';
-        countryCode = geoData.address?.country_code || '';
       } catch {
         console.log('Reverse geocoding failed');
       }
 
-      const useCelsius = shouldUseCelsius(countryCode);
-      const tempUnit = useCelsius ? 'celsius' : 'fahrenheit';
-      const windUnit = useCelsius ? 'kmh' : 'mph';
-
       const response = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&temperature_unit=${tempUnit}&wind_speed_unit=${windUnit}&timezone=auto&forecast_days=5`
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&temperature_unit=celsius&wind_speed_unit=kmh&timezone=auto&forecast_days=5`
       );
       const data = await response.json();
 
@@ -186,8 +169,8 @@ export default function WeatherWidget() {
         else if (code >= 2) condition = 'partly_cloudy';
         return {
           day: dayNames[d.getDay()],
-          high: Math.round(data.daily?.temperature_2m_max?.[i] ?? 72),
-          low: Math.round(data.daily?.temperature_2m_min?.[i] ?? 58),
+          highC: Math.round(data.daily?.temperature_2m_max?.[i] ?? 25),
+          lowC: Math.round(data.daily?.temperature_2m_min?.[i] ?? 15),
           condition,
         };
       });
@@ -199,12 +182,11 @@ export default function WeatherWidget() {
       else if (weatherCode >= 2) desc = 'Partly Cloudy';
 
       setWeather({
-        temp: Math.round(data.current?.temperature_2m ?? 72),
+        tempC: Math.round(data.current?.temperature_2m ?? 22),
         humidity: Math.round(data.current?.relative_humidity_2m ?? 55),
         description: desc,
         city: cityName,
-        windSpeed: Math.round(data.current?.wind_speed_10m ?? 8),
-        useCelsius,
+        windSpeedKmh: Math.round(data.current?.wind_speed_10m ?? 8),
         forecast,
       });
     } catch (e) {
@@ -215,12 +197,18 @@ export default function WeatherWidget() {
     }
   };
 
+  const displayTemp = (c: number) => useCelsius ? c : cToF(c);
+  const tempUnit = useCelsius ? '°C' : '°F';
+  const windDisplay = useCelsius
+    ? `${weather?.windSpeedKmh ?? 0} km/h`
+    : `${Math.round((weather?.windSpeedKmh ?? 0) * 0.621)} mph`;
+
   if (loading) {
     const opacity = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.7] });
     return (
       <GlassCard style={styles.container}>
-        <Animated.View style={[styles.loadingBar, { opacity }]} />
-        <Animated.View style={[styles.loadingBar, { opacity, width: '60%' }]} />
+        <Animated.View style={[styles.loadingBar, { opacity, backgroundColor: colors.backgroundWarm }]} />
+        <Animated.View style={[styles.loadingBar, { opacity, width: '60%', backgroundColor: colors.backgroundWarm }]} />
       </GlassCard>
     );
   }
@@ -234,29 +222,29 @@ export default function WeatherWidget() {
       <GlassCard style={styles.container}>
         <View style={styles.topRow}>
           <View style={styles.tempSection}>
-            <Text style={styles.temp}>{weather.temp}°{weather.useCelsius ? 'C' : 'F'}</Text>
-            <Text style={styles.description}>{weather.description}</Text>
-            <Text style={styles.city}>{weather.city}</Text>
+            <Text style={[styles.temp, { color: colors.text }]}>{displayTemp(weather.tempC)}{tempUnit}</Text>
+            <Text style={[styles.description, { color: colors.textSecondary }]}>{weather.description}</Text>
+            <Text style={[styles.city, { color: colors.textTertiary }]}>{weather.city}</Text>
           </View>
           <View style={styles.detailsColumn}>
             <View style={styles.detailRow}>
-              <Droplets size={13} color={Colors.accent} strokeWidth={1.6} />
-              <Text style={styles.detailText}>{weather.humidity}%</Text>
+              <Droplets size={13} color={colors.accent} strokeWidth={1.6} />
+              <Text style={[styles.detailText, { color: colors.textSecondary }]}>{weather.humidity}%</Text>
             </View>
             <View style={styles.detailRow}>
-              <Wind size={13} color={Colors.textSecondary} strokeWidth={1.6} />
-              <Text style={styles.detailText}>{weather.windSpeed} {weather.useCelsius ? 'km/h' : 'mph'}</Text>
+              <Wind size={13} color={colors.textSecondary} strokeWidth={1.6} />
+              <Text style={[styles.detailText, { color: colors.textSecondary }]}>{windDisplay}</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.forecastRow}>
+        <View style={[styles.forecastRow, { borderTopColor: colors.divider }]}>
           {weather.forecast.map((f, i) => (
             <View key={i} style={styles.forecastDay}>
-              <Text style={styles.forecastDayText}>{f.day}</Text>
+              <Text style={[styles.forecastDayText, { color: colors.textSecondary }]}>{f.day}</Text>
               <Text style={styles.forecastEmoji}>{getConditionEmoji(f.condition)}</Text>
-              <Text style={styles.forecastHigh}>{f.high}°</Text>
-              <Text style={styles.forecastLow}>{f.low}°</Text>
+              <Text style={[styles.forecastHigh, { color: colors.text }]}>{displayTemp(f.highC)}°</Text>
+              <Text style={[styles.forecastLow, { color: colors.textTertiary }]}>{displayTemp(f.lowC)}°</Text>
             </View>
           ))}
         </View>
@@ -272,14 +260,14 @@ export default function WeatherWidget() {
               hint.type === 'tip' && { backgroundColor: 'rgba(48, 209, 88, 0.1)' },
             ]}>
               {hint.type === 'warning' ? (
-                <AlertTriangle size={14} color={Colors.warning} strokeWidth={1.8} />
+                <AlertTriangle size={14} color={colors.warning} strokeWidth={1.8} />
               ) : hint.type === 'info' ? (
-                <CloudSun size={14} color={Colors.accent} strokeWidth={1.8} />
+                <CloudSun size={14} color={colors.accent} strokeWidth={1.8} />
               ) : (
-                <Thermometer size={14} color={Colors.primary} strokeWidth={1.8} />
+                <Thermometer size={14} color={colors.primary} strokeWidth={1.8} />
               )}
             </View>
-            <Text style={styles.hintText}>{hint.message}</Text>
+            <Text style={[styles.hintText, { color: colors.text }]}>{hint.message}</Text>
           </View>
         </GlassCard>
       ))}
@@ -295,7 +283,6 @@ const styles = StyleSheet.create({
   loadingBar: {
     height: 14,
     borderRadius: 7,
-    backgroundColor: Colors.backgroundWarm,
     marginBottom: 10,
     width: '80%',
   },
@@ -309,18 +296,15 @@ const styles = StyleSheet.create({
   temp: {
     fontSize: 36,
     fontWeight: '700' as const,
-    color: Colors.text,
     letterSpacing: -1,
   },
   description: {
     fontSize: 14,
     fontWeight: '500' as const,
-    color: Colors.textSecondary,
     marginTop: 2,
   },
   city: {
     fontSize: 12,
-    color: Colors.textTertiary,
     marginTop: 2,
   },
   detailsColumn: {
@@ -336,13 +320,11 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 13,
     fontWeight: '500' as const,
-    color: Colors.textSecondary,
   },
   forecastRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.divider,
     paddingTop: 12,
   },
   forecastDay: {
@@ -352,7 +334,6 @@ const styles = StyleSheet.create({
   forecastDayText: {
     fontSize: 11,
     fontWeight: '500' as const,
-    color: Colors.textSecondary,
     marginBottom: 4,
   },
   forecastEmoji: {
@@ -362,11 +343,9 @@ const styles = StyleSheet.create({
   forecastHigh: {
     fontSize: 13,
     fontWeight: '600' as const,
-    color: Colors.text,
   },
   forecastLow: {
     fontSize: 11,
-    color: Colors.textTertiary,
   },
   hintCard: {
     padding: 14,
@@ -389,7 +368,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: '400' as const,
-    color: Colors.text,
     lineHeight: 19,
   },
 });

@@ -1,12 +1,14 @@
+import React from 'react';
 import { Stack } from 'expo-router';
-import Colors from '@/constants/colors';
+import { useSettings } from '@/providers/SettingsProvider';
 
 export default function PlantsLayout() {
+  const { colors } = useSettings();
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: Colors.background },
-        headerTintColor: Colors.text,
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.text,
         headerShadowVisible: false,
       }}
     >

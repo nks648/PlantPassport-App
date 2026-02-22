@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router';
 import { Camera, ImageIcon, X, ScanLine, Search, Leaf } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
-import Colors from '@/constants/colors';
+import { useSettings } from '@/providers/SettingsProvider';
 
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_Plantual || '';
 const GEMINI_MODEL = 'gemini-2.5-flash';
@@ -192,6 +192,7 @@ type ScanMode = 'scan' | 'search';
 
 export default function ScanScreen() {
   const router = useRouter();
+  const { colors } = useSettings();
   const [mode, setMode] = useState<ScanMode>('scan');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -343,32 +344,32 @@ export default function ScanScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.closeBtn} activeOpacity={0.7}>
-            <X size={20} color={Colors.text} strokeWidth={2} />
+          <TouchableOpacity onPress={handleClose} style={[styles.closeBtn, { backgroundColor: colors.inputBackground }]} activeOpacity={0.7}>
+            <X size={20} color={colors.text} strokeWidth={2} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Add Plant</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Add Plant</Text>
           <View style={styles.headerSpacer} />
         </View>
 
-        <View style={styles.modeToggle}>
+        <View style={[styles.modeToggle, { backgroundColor: colors.inputBackground }]}>
           <TouchableOpacity
-            style={[styles.modeBtn, mode === 'scan' && styles.modeBtnActive]}
+            style={[styles.modeBtn, mode === 'scan' && [styles.modeBtnActive, { backgroundColor: colors.primary }]]}
             onPress={() => handleModeChange('scan')}
             activeOpacity={0.8}
           >
-            <Camera size={16} color={mode === 'scan' ? '#fff' : Colors.textSecondary} strokeWidth={1.8} />
-            <Text style={[styles.modeText, mode === 'scan' && styles.modeTextActive]}>Scan</Text>
+            <Camera size={16} color={mode === 'scan' ? '#fff' : colors.textSecondary} strokeWidth={1.8} />
+            <Text style={[styles.modeText, { color: colors.textSecondary }, mode === 'scan' && styles.modeTextActive]}>Scan</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.modeBtn, mode === 'search' && styles.modeBtnActive]}
+            style={[styles.modeBtn, mode === 'search' && [styles.modeBtnActive, { backgroundColor: colors.primary }]]}
             onPress={() => handleModeChange('search')}
             activeOpacity={0.8}
           >
-            <Search size={16} color={mode === 'search' ? '#fff' : Colors.textSecondary} strokeWidth={1.8} />
-            <Text style={[styles.modeText, mode === 'search' && styles.modeTextActive]}>Search</Text>
+            <Search size={16} color={mode === 'search' ? '#fff' : colors.textSecondary} strokeWidth={1.8} />
+            <Text style={[styles.modeText, { color: colors.textSecondary }, mode === 'search' && styles.modeTextActive]}>Search</Text>
           </TouchableOpacity>
         </View>
 
@@ -376,12 +377,12 @@ export default function ScanScreen() {
           <>
             {isScanning ? (
               <View style={styles.loadingContainer}>
-                <View style={styles.scanningCard}>
+                <View style={[styles.scanningCard, { backgroundColor: colors.cardSolid }]}>
                   {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} contentFit="cover" />}
                   <View style={styles.scanOverlay}>
-                    <ActivityIndicator size="large" color={Colors.primary} />
-                    <Text style={styles.scanningText}>Identifying plant…</Text>
-                    <Text style={styles.scanningSubtext}>Analyzing with AI</Text>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={[styles.scanningText, { color: colors.text }]}>Identifying plant…</Text>
+                    <Text style={[styles.scanningSubtext, { color: colors.textSecondary }]}>Analyzing with AI</Text>
                   </View>
                 </View>
               </View>
@@ -389,11 +390,11 @@ export default function ScanScreen() {
               <View style={styles.body}>
                 <View style={styles.illustration}>
                   {imageUri && <Image source={{ uri: imageUri }} style={styles.errorPreview} contentFit="cover" />}
-                  <Text style={styles.errorTitle}>Scan Failed</Text>
-                  <Text style={styles.subtitle}>{identifyMutation.error?.message || 'Could not identify. Try again.'}</Text>
+                  <Text style={[styles.errorTitle, { color: colors.error }]}>Scan Failed</Text>
+                  <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{identifyMutation.error?.message || 'Could not identify. Try again.'}</Text>
                 </View>
                 <View style={styles.actions}>
-                  <TouchableOpacity style={styles.primaryButton} onPress={handleScanAgain} activeOpacity={0.8}>
+                  <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]} onPress={handleScanAgain} activeOpacity={0.8}>
                     <Camera size={22} color="#fff" strokeWidth={2} />
                     <Text style={styles.primaryButtonText}>Scan Again</Text>
                   </TouchableOpacity>
@@ -402,20 +403,20 @@ export default function ScanScreen() {
             ) : (
               <View style={styles.body}>
                 <View style={styles.illustration}>
-                  <View style={styles.scanIconBg}>
-                    <ScanLine size={48} color={Colors.primary} strokeWidth={1.5} />
+                  <View style={[styles.scanIconBg, { backgroundColor: colors.primaryMuted }]}>
+                    <ScanLine size={48} color={colors.primary} strokeWidth={1.5} />
                   </View>
-                  <Text style={styles.title}>Identify Any Plant</Text>
-                  <Text style={styles.subtitle}>Take a photo or choose from your gallery to identify a plant</Text>
+                  <Text style={[styles.title, { color: colors.text }]}>Identify Any Plant</Text>
+                  <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Take a photo or choose from your gallery to identify a plant</Text>
                 </View>
                 <View style={styles.actions}>
-                  <TouchableOpacity style={styles.primaryButton} onPress={handleTakePhoto} activeOpacity={0.8} disabled={isScanning}>
+                  <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]} onPress={handleTakePhoto} activeOpacity={0.8} disabled={isScanning}>
                     <Camera size={22} color="#fff" strokeWidth={2} />
                     <Text style={styles.primaryButtonText}>Take Photo</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.secondaryButton} onPress={handleChooseGallery} activeOpacity={0.8} disabled={isScanning}>
-                    <ImageIcon size={20} color={Colors.text} strokeWidth={1.8} />
-                    <Text style={styles.secondaryButtonText}>Choose from Gallery</Text>
+                  <TouchableOpacity style={[styles.secondaryButton, { backgroundColor: colors.cardSolid }]} onPress={handleChooseGallery} activeOpacity={0.8} disabled={isScanning}>
+                    <ImageIcon size={20} color={colors.text} strokeWidth={1.8} />
+                    <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Choose from Gallery</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -424,12 +425,12 @@ export default function ScanScreen() {
         ) : (
           <View style={styles.searchBody}>
             <View style={styles.searchInputRow}>
-              <View style={styles.searchInputWrap}>
-                <Search size={18} color={Colors.textSecondary} strokeWidth={1.8} />
+              <View style={[styles.searchInputWrap, { backgroundColor: colors.cardSolid, borderColor: colors.divider }]}>
+                <Search size={18} color={colors.textSecondary} strokeWidth={1.8} />
                 <TextInput
-                  style={styles.searchInput}
+                  style={[styles.searchInput, { color: colors.text }]}
                   placeholder="Search plant name..."
-                  placeholderTextColor={Colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   returnKeyType="search"
@@ -438,12 +439,12 @@ export default function ScanScreen() {
                 />
                 {searchQuery.length > 0 && (
                   <TouchableOpacity onPress={() => { setSearchQuery(''); setSearchResults([]); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <X size={16} color={Colors.textTertiary} strokeWidth={2} />
+                    <X size={16} color={colors.textTertiary} strokeWidth={2} />
                   </TouchableOpacity>
                 )}
               </View>
               <TouchableOpacity
-                style={[styles.searchBtn, (!searchQuery.trim() || isSearching) && styles.searchBtnDisabled]}
+                style={[styles.searchBtn, { backgroundColor: colors.primary }, (!searchQuery.trim() || isSearching) && styles.searchBtnDisabled]}
                 onPress={handleSearch}
                 disabled={!searchQuery.trim() || isSearching}
                 activeOpacity={0.8}
@@ -458,40 +459,40 @@ export default function ScanScreen() {
 
             {isSearching && searchResults.length === 0 ? (
               <View style={styles.searchLoading}>
-                <ActivityIndicator size="large" color={Colors.primary} />
-                <Text style={styles.searchLoadingText}>Searching...</Text>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.searchLoadingText, { color: colors.textSecondary }]}>Searching...</Text>
               </View>
             ) : searchResults.length > 0 ? (
               <ScrollView style={styles.resultsList} contentContainerStyle={styles.resultsContent} showsVerticalScrollIndicator={false}>
                 {searchResults.map((result, i) => (
                   <TouchableOpacity
                     key={`${result.scientificName}-${i}`}
-                    style={styles.resultCard}
+                    style={[styles.resultCard, { backgroundColor: colors.cardSolid, borderColor: colors.divider }]}
                     onPress={() => handleSelectResult(result)}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.resultIconWrap}>
-                      <Leaf size={20} color={Colors.primary} strokeWidth={1.8} />
+                    <View style={[styles.resultIconWrap, { backgroundColor: colors.primaryMuted }]}>
+                      <Leaf size={20} color={colors.primary} strokeWidth={1.8} />
                     </View>
                     <View style={styles.resultInfo}>
-                      <Text style={styles.resultName}>{result.commonName}</Text>
-                      <Text style={styles.resultSpecies}>{result.scientificName}</Text>
-                      <Text style={styles.resultDesc} numberOfLines={2}>{result.description}</Text>
+                      <Text style={[styles.resultName, { color: colors.text }]}>{result.commonName}</Text>
+                      <Text style={[styles.resultSpecies, { color: colors.textSecondary }]}>{result.scientificName}</Text>
+                      <Text style={[styles.resultDesc, { color: colors.textSecondary }]} numberOfLines={2}>{result.description}</Text>
                     </View>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             ) : searchMutation.isError ? (
               <View style={styles.searchEmpty}>
-                <Text style={styles.searchEmptyText}>Search failed. Please try again.</Text>
+                <Text style={[styles.searchEmptyText, { color: colors.textSecondary }]}>Search failed. Please try again.</Text>
               </View>
             ) : (
               <View style={styles.searchEmpty}>
-                <View style={styles.searchEmptyIcon}>
-                  <Search size={40} color={Colors.textTertiary} strokeWidth={1.2} />
+                <View style={[styles.searchEmptyIcon, { backgroundColor: colors.inputBackground }]}>
+                  <Search size={40} color={colors.textTertiary} strokeWidth={1.2} />
                 </View>
-                <Text style={styles.searchEmptyTitle}>Search by Plant Name</Text>
-                <Text style={styles.searchEmptyText}>Type a plant name and tap Go to find it</Text>
+                <Text style={[styles.searchEmptyTitle, { color: colors.text }]}>Search by Plant Name</Text>
+                <Text style={[styles.searchEmptyText, { color: colors.textSecondary }]}>Type a plant name and tap Go to find it</Text>
               </View>
             )}
           </View>
@@ -504,333 +505,55 @@ export default function ScanScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(60, 60, 67, 0.04)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerSpacer: {
-    width: 40,
-    height: 40,
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600' as const,
-    color: Colors.text,
-  },
-  modeToggle: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: 'rgba(60, 60, 67, 0.06)',
-    borderRadius: 12,
-    padding: 3,
-  },
-  modeBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 10,
-    gap: 6,
-  },
-  modeBtnActive: {
-    backgroundColor: Colors.primary,
-    ...Platform.select({
-      ios: {
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      },
-      android: { elevation: 3 },
-    }),
-  },
-  modeText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: Colors.textSecondary,
-  },
-  modeTextActive: {
-    color: '#fff',
-  },
-  body: {
-    flex: 1,
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-  },
-  illustration: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  scanIconBg: {
-    width: 100,
-    height: 100,
-    borderRadius: 30,
-    backgroundColor: Colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700' as const,
-    color: Colors.text,
-    textAlign: 'center',
-    letterSpacing: -0.5,
-  },
-  errorTitle: {
-    fontSize: 22,
-    fontWeight: '700' as const,
-    color: Colors.error,
-    textAlign: 'center',
-    marginTop: 16,
-  },
-  errorPreview: {
-    width: 160,
-    height: 160,
-    borderRadius: 20,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    maxWidth: 280,
-  },
-  actions: {
-    gap: 12,
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 14,
-    ...Platform.select({
-      ios: {
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-      },
-      android: { elevation: 4 },
-    }),
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600' as const,
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: Colors.cardSolid,
-    paddingVertical: 16,
-    borderRadius: 14,
-  },
-  secondaryButtonText: {
-    color: Colors.text,
-    fontSize: 16,
-    fontWeight: '500' as const,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  scanningCard: {
-    width: '100%',
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: Colors.cardSolid,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  previewImage: {
-    width: '100%',
-    height: 280,
-  },
-  scanOverlay: {
-    padding: 28,
-    alignItems: 'center',
-    gap: 8,
-  },
-  scanningText: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-    color: Colors.text,
-    marginTop: 8,
-  },
-  scanningSubtext: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  searchBody: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  searchInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
-  },
-  searchInputWrap: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.cardSolid,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 12 : 8,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: Colors.text,
-    padding: 0,
-  },
-  searchBtn: {
-    backgroundColor: Colors.primary,
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchBtnDisabled: {
-    opacity: 0.5,
-  },
-  searchBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700' as const,
-  },
-  searchLoading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  searchLoadingText: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-  },
-  resultsList: {
-    flex: 1,
-  },
-  resultsContent: {
-    paddingBottom: 32,
-    gap: 10,
-  },
-  resultCard: {
-    flexDirection: 'row',
-    backgroundColor: Colors.cardSolid,
-    borderRadius: 14,
-    padding: 16,
-    gap: 14,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 8,
-      },
-      android: { elevation: 2 },
-    }),
-  },
-  resultIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: Colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resultInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  resultName: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: Colors.text,
-  },
-  resultSpecies: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  resultDesc: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  searchEmpty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  searchEmptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: 'rgba(60, 60, 67, 0.04)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  searchEmptyTitle: {
-    fontSize: 20,
-    fontWeight: '600' as const,
-    color: Colors.text,
-  },
-  searchEmptyText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-  hiddenInputs: {
-    position: 'absolute',
-    width: 0,
-    height: 0,
-    overflow: 'hidden',
-  },
+  root: { flex: 1 },
+  safeArea: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
+  closeBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  headerSpacer: { width: 40, height: 40 },
+  headerTitle: { fontSize: 17, fontWeight: '600' as const },
+  modeToggle: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 12, borderRadius: 12, padding: 3 },
+  modeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10, gap: 6 },
+  modeBtnActive: { ...Platform.select({ ios: { shadowColor: '#30D158', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 }, android: { elevation: 3 } }) },
+  modeText: { fontSize: 14, fontWeight: '600' as const },
+  modeTextActive: { color: '#fff' },
+  body: { flex: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingBottom: 24 },
+  illustration: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
+  scanIconBg: { width: 100, height: 100, borderRadius: 30, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  title: { fontSize: 26, fontWeight: '700' as const, textAlign: 'center', letterSpacing: -0.5 },
+  errorTitle: { fontSize: 22, fontWeight: '700' as const, textAlign: 'center', marginTop: 16 },
+  errorPreview: { width: 160, height: 160, borderRadius: 20 },
+  subtitle: { fontSize: 15, textAlign: 'center', lineHeight: 22, maxWidth: 280 },
+  actions: { gap: 12 },
+  primaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, borderRadius: 14, ...Platform.select({ ios: { shadowColor: '#30D158', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  primaryButtonText: { color: '#fff', fontSize: 17, fontWeight: '600' as const },
+  secondaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, borderRadius: 14 },
+  secondaryButtonText: { fontSize: 16, fontWeight: '500' as const },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  scanningCard: { width: '100%', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 8 },
+  previewImage: { width: '100%', height: 280 },
+  scanOverlay: { padding: 28, alignItems: 'center', gap: 8 },
+  scanningText: { fontSize: 18, fontWeight: '600' as const, marginTop: 8 },
+  scanningSubtext: { fontSize: 14 },
+  searchBody: { flex: 1, paddingHorizontal: 20 },
+  searchInputRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
+  searchInputWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', borderRadius: 12, paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 12 : 8, gap: 10, borderWidth: 1 },
+  searchInput: { flex: 1, fontSize: 16, padding: 0 },
+  searchBtn: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  searchBtnDisabled: { opacity: 0.5 },
+  searchBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' as const },
+  searchLoading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  searchLoadingText: { fontSize: 15 },
+  resultsList: { flex: 1 },
+  resultsContent: { paddingBottom: 32, gap: 10 },
+  resultCard: { flexDirection: 'row', borderRadius: 14, padding: 16, gap: 14, borderWidth: 1, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8 }, android: { elevation: 2 } }) },
+  resultIconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  resultInfo: { flex: 1, gap: 2 },
+  resultName: { fontSize: 16, fontWeight: '600' as const },
+  resultSpecies: { fontSize: 13, fontStyle: 'italic' as const },
+  resultDesc: { fontSize: 13, lineHeight: 18, marginTop: 4 },
+  searchEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  searchEmptyIcon: { width: 80, height: 80, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  searchEmptyTitle: { fontSize: 20, fontWeight: '600' as const },
+  searchEmptyText: { fontSize: 14, textAlign: 'center' },
+  hiddenInputs: { position: 'absolute', width: 0, height: 0, overflow: 'hidden' },
 });

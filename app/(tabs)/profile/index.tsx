@@ -9,13 +9,11 @@ import {
   Platform,
   Animated,
   Alert,
-  ActionSheetIOS,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import {
-  User,
   Edit3,
   Check,
   X,
@@ -31,19 +29,18 @@ import {
   Wind,
   Camera,
 } from 'lucide-react-native';
-import Colors from '@/constants/colors';
 import { usePlants } from '@/providers/PlantProvider';
+import { useSettings } from '@/providers/SettingsProvider';
 import { getRankForXP } from '@/types/plant';
 import GlassCard from '@/components/GlassCard';
 import HealthDots from '@/components/HealthDots';
 
 interface LocationWeather {
   city: string;
-  temp: number;
+  tempC: number;
   humidity: number;
   description: string;
-  windSpeed: number;
-  useCelsius: boolean;
+  windSpeedKmh: number;
 }
 
 interface LocationCareAdvice {
@@ -56,14 +53,18 @@ function fToC(f: number): number {
   return Math.round((f - 32) * 5 / 9);
 }
 
-function generateLocationCare(weather: LocationWeather, plants: { name: string; needs: { water: number; light: number; humidity: number; idealTempMin: number; idealTempMax: number } }[]): LocationCareAdvice[] {
+function cToF(c: number): number {
+  return Math.round(c * 9 / 5 + 32);
+}
+
+function generateLocationCare(weather: LocationWeather, useCelsius: boolean, plants: { name: string; needs: { water: number; light: number; humidity: number; idealTempMin: number; idealTempMax: number } }[]): LocationCareAdvice[] {
   const advice: LocationCareAdvice[] = [];
-  const unit = weather.useCelsius ? '°C' : '°F';
-  const currentTemp = weather.temp;
+  const unit = useCelsius ? '°C' : '°F';
+  const currentTemp = useCelsius ? weather.tempC : cToF(weather.tempC);
 
   plants.forEach((plant) => {
-    const idealMin = weather.useCelsius ? fToC(plant.needs.idealTempMin) : plant.needs.idealTempMin;
-    const idealMax = weather.useCelsius ? fToC(plant.needs.idealTempMax) : plant.needs.idealTempMax;
+    const idealMin = useCelsius ? fToC(plant.needs.idealTempMin) : plant.needs.idealTempMin;
+    const idealMax = useCelsius ? fToC(plant.needs.idealTempMax) : plant.needs.idealTempMax;
 
     if (currentTemp > idealMax) {
       advice.push({
@@ -102,6 +103,7 @@ function generateLocationCare(weather: LocationWeather, plants: { name: string; 
 
 export default function ProfileScreen() {
   const { plants, userProfile, averageHealth, averageStreak, totalStreak, updateProfile } = usePlants();
+  const { colors, useCelsius } = useSettings();
   const rankInfo = getRankForXP(userProfile.xp);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -128,13 +130,13 @@ export default function ProfileScreen() {
               await fetchWeatherForLocation(pos.coords.latitude, pos.coords.longitude);
             },
             () => {
-              setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8, useCelsius: false });
+              setLocationWeather({ city: 'Unknown', tempC: 22, humidity: 55, description: 'Partly Cloudy', windSpeedKmh: 13 });
               setLocationLoading(false);
             },
             { timeout: 5000 }
           );
         } else {
-          setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8, useCelsius: false });
+          setLocationWeather({ city: 'Unknown', tempC: 22, humidity: 55, description: 'Partly Cloudy', windSpeedKmh: 13 });
           setLocationLoading(false);
         }
       } else {
@@ -145,16 +147,16 @@ export default function ProfileScreen() {
             const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
             await fetchWeatherForLocation(loc.coords.latitude, loc.coords.longitude);
           } else {
-            setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8, useCelsius: false });
+            setLocationWeather({ city: 'Unknown', tempC: 22, humidity: 55, description: 'Partly Cloudy', windSpeedKmh: 13 });
             setLocationLoading(false);
           }
         } else {
-          setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8, useCelsius: false });
+          setLocationWeather({ city: 'Unknown', tempC: 22, humidity: 55, description: 'Partly Cloudy', windSpeedKmh: 13 });
           setLocationLoading(false);
         }
       }
     } catch {
-      setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8, useCelsius: false });
+      setLocationWeather({ city: 'Unknown', tempC: 22, humidity: 55, description: 'Partly Cloudy', windSpeedKmh: 13 });
       setLocationLoading(false);
     }
   };
@@ -163,16 +165,10 @@ export default function ProfileScreen() {
     try {
       const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`);
       const geoData = await geoRes.json();
-
       const city = geoData.address?.city || geoData.address?.town || geoData.address?.village || 'Your Area';
-      const countryCode = (geoData.address?.country_code || '').toLowerCase();
-      const imperialCountries = ['us', 'mm', 'lr', 'bs', 'ky', 'pw', 'mh'];
-      const useCelsius = !imperialCountries.includes(countryCode);
-      const tempUnit = useCelsius ? 'celsius' : 'fahrenheit';
-      const windUnit = useCelsius ? 'kmh' : 'mph';
 
       const weatherRes = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&temperature_unit=${tempUnit}&wind_speed_unit=${windUnit}&timezone=auto`
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&temperature_unit=celsius&wind_speed_unit=kmh&timezone=auto`
       );
       const weatherData = await weatherRes.json();
 
@@ -184,19 +180,24 @@ export default function ProfileScreen() {
 
       setLocationWeather({
         city,
-        temp: Math.round(weatherData.current?.temperature_2m ?? 72),
+        tempC: Math.round(weatherData.current?.temperature_2m ?? 22),
         humidity: Math.round(weatherData.current?.relative_humidity_2m ?? 55),
         description: desc,
-        windSpeed: Math.round(weatherData.current?.wind_speed_10m ?? 8),
-        useCelsius,
+        windSpeedKmh: Math.round(weatherData.current?.wind_speed_10m ?? 8),
       });
     } catch (e) {
       console.log('Location weather error:', e);
-      setLocationWeather({ city: 'Unknown', temp: 72, humidity: 55, description: 'Partly Cloudy', windSpeed: 8, useCelsius: false });
+      setLocationWeather({ city: 'Unknown', tempC: 22, humidity: 55, description: 'Partly Cloudy', windSpeedKmh: 13 });
     } finally {
       setLocationLoading(false);
     }
   };
+
+  const displayTemp = (c: number) => useCelsius ? c : cToF(c);
+  const tempUnit = useCelsius ? '°C' : '°F';
+  const windDisplay = useCelsius
+    ? `${locationWeather?.windSpeedKmh ?? 0} km/h`
+    : `${Math.round((locationWeather?.windSpeedKmh ?? 0) * 0.621)} mph`;
 
   const handleSaveName = useCallback(async () => {
     const trimmed = editName.trim();
@@ -261,11 +262,11 @@ export default function ProfileScreen() {
 
   const locationCare = useMemo(() => {
     if (!locationWeather) return [];
-    return generateLocationCare(locationWeather, plants);
-  }, [locationWeather, plants]);
+    return generateLocationCare(locationWeather, useCelsius, plants);
+  }, [locationWeather, useCelsius, plants]);
 
   return (
-    <Animated.View style={[styles.wrapper, { opacity: fadeAnim }]}>
+    <Animated.View style={[styles.wrapper, { opacity: fadeAnim, backgroundColor: colors.background }]}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -275,7 +276,7 @@ export default function ProfileScreen() {
           <View style={styles.profileHeader}>
             <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.8} style={styles.avatarContainer}>
               <Image source={{ uri: userProfile.avatar }} style={styles.avatar} />
-              <View style={styles.avatarBadge}>
+              <View style={[styles.avatarBadge, { backgroundColor: colors.primary, borderColor: colors.cardSolid }]}>
                 <Camera size={12} color="#fff" strokeWidth={2} />
               </View>
             </TouchableOpacity>
@@ -283,7 +284,7 @@ export default function ProfileScreen() {
               {isEditing ? (
                 <View style={styles.editRow}>
                   <TextInput
-                    style={styles.nameInput}
+                    style={[styles.nameInput, { color: colors.text, borderBottomColor: colors.primary }]}
                     value={editName}
                     onChangeText={setEditName}
                     autoFocus
@@ -292,39 +293,39 @@ export default function ProfileScreen() {
                     onSubmitEditing={handleSaveName}
                     testID="name-input"
                   />
-                  <TouchableOpacity onPress={handleSaveName} style={styles.editBtn} testID="save-name-btn">
-                    <Check size={18} color={Colors.primary} strokeWidth={2} />
+                  <TouchableOpacity onPress={handleSaveName} style={[styles.editBtn, { backgroundColor: colors.inputBackground }]} testID="save-name-btn">
+                    <Check size={18} color={colors.primary} strokeWidth={2} />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={handleCancelEdit} style={styles.editBtn} testID="cancel-name-btn">
-                    <X size={18} color={Colors.error} strokeWidth={2} />
+                  <TouchableOpacity onPress={handleCancelEdit} style={[styles.editBtn, { backgroundColor: colors.inputBackground }]} testID="cancel-name-btn">
+                    <X size={18} color={colors.error} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.nameRow}>
-                  <Text style={styles.profileName}>{userProfile.name}</Text>
-                  <TouchableOpacity onPress={handleStartEdit} style={styles.editIconBtn} testID="edit-name-btn">
-                    <Edit3 size={14} color={Colors.textSecondary} strokeWidth={1.8} />
+                  <Text style={[styles.profileName, { color: colors.text }]}>{userProfile.name}</Text>
+                  <TouchableOpacity onPress={handleStartEdit} style={[styles.editIconBtn, { backgroundColor: colors.inputBackground }]} testID="edit-name-btn">
+                    <Edit3 size={14} color={colors.textSecondary} strokeWidth={1.8} />
                   </TouchableOpacity>
                 </View>
               )}
               <View style={styles.rankRow}>
                 <Text style={styles.rankEmoji}>{rankInfo.emoji}</Text>
-                <Text style={styles.rankText}>{rankInfo.rank}</Text>
+                <Text style={[styles.rankText, { color: colors.textSecondary }]}>{rankInfo.rank}</Text>
               </View>
             </View>
           </View>
 
           {rankInfo.xpToNext != null && (
             <View style={styles.xpSection}>
-              <View style={styles.xpBarTrack}>
-                <View style={[styles.xpBarFill, { width: `${Math.min(xpProgress * 100, 100)}%` }]} />
+              <View style={[styles.xpBarTrack, { backgroundColor: colors.inputBackground }]}>
+                <View style={[styles.xpBarFill, { width: `${Math.min(xpProgress * 100, 100)}%`, backgroundColor: colors.accent }]} />
               </View>
               <View style={styles.xpLabelRow}>
                 <View style={styles.xpBadge}>
-                  <Zap size={10} color={Colors.accent} />
-                  <Text style={styles.xpBadgeText}>{userProfile.xp} XP</Text>
+                  <Zap size={10} color={colors.accent} />
+                  <Text style={[styles.xpBadgeText, { color: colors.accent }]}>{userProfile.xp} XP</Text>
                 </View>
-                <Text style={styles.xpToNext}>{rankInfo.xpToNext} to {rankInfo.nextRank}</Text>
+                <Text style={[styles.xpToNext, { color: colors.textSecondary }]}>{rankInfo.xpToNext} to {rankInfo.nextRank}</Text>
               </View>
             </View>
           )}
@@ -332,51 +333,51 @@ export default function ProfileScreen() {
 
         <View style={styles.statsGrid}>
           <GlassCard style={styles.miniStat}>
-            <Leaf size={18} color={Colors.primary} strokeWidth={1.6} />
-            <Text style={styles.miniStatValue}>{plants.length}</Text>
-            <Text style={styles.miniStatLabel}>Plants</Text>
+            <Leaf size={18} color={colors.primary} strokeWidth={1.6} />
+            <Text style={[styles.miniStatValue, { color: colors.text }]}>{plants.length}</Text>
+            <Text style={[styles.miniStatLabel, { color: colors.textSecondary }]}>Plants</Text>
           </GlassCard>
           <GlassCard style={styles.miniStat}>
-            <Droplets size={18} color={Colors.accent} strokeWidth={1.6} />
-            <Text style={styles.miniStatValue}>{userProfile.totalWaterings}</Text>
-            <Text style={styles.miniStatLabel}>Waterings</Text>
+            <Droplets size={18} color={colors.accent} strokeWidth={1.6} />
+            <Text style={[styles.miniStatValue, { color: colors.text }]}>{userProfile.totalWaterings}</Text>
+            <Text style={[styles.miniStatLabel, { color: colors.textSecondary }]}>Waterings</Text>
           </GlassCard>
           <GlassCard style={styles.miniStat}>
-            <TrendingUp size={18} color={Colors.streak} strokeWidth={1.6} />
-            <Text style={styles.miniStatValue}>{averageStreak}</Text>
-            <Text style={styles.miniStatLabel}>Avg Streak</Text>
+            <TrendingUp size={18} color={colors.streak} strokeWidth={1.6} />
+            <Text style={[styles.miniStatValue, { color: colors.text }]}>{averageStreak}</Text>
+            <Text style={[styles.miniStatLabel, { color: colors.textSecondary }]}>Avg Streak</Text>
           </GlassCard>
           <GlassCard style={styles.miniStat}>
-            <Award size={18} color={Colors.xpPurple} strokeWidth={1.6} />
-            <Text style={styles.miniStatValue}>{averageHealth.toFixed(1)}</Text>
-            <Text style={styles.miniStatLabel}>Avg Health</Text>
+            <Award size={18} color={colors.xpPurple} strokeWidth={1.6} />
+            <Text style={[styles.miniStatValue, { color: colors.text }]}>{averageHealth.toFixed(1)}</Text>
+            <Text style={[styles.miniStatLabel, { color: colors.textSecondary }]}>Avg Health</Text>
           </GlassCard>
         </View>
 
         {locationWeather && !locationLoading && (
           <>
             <View style={styles.sectionHeader}>
-              <MapPin size={16} color={Colors.accent} strokeWidth={1.8} />
-              <Text style={styles.sectionTitle}>Plant care for {locationWeather.city !== 'Unknown' ? locationWeather.city : 'your location'}</Text>
+              <MapPin size={16} color={colors.accent} strokeWidth={1.8} />
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Plant care for {locationWeather.city !== 'Unknown' ? locationWeather.city : 'your location'}</Text>
             </View>
 
             <GlassCard style={styles.locationCard}>
               <View style={styles.locationRow}>
                 <View style={styles.locationDetail}>
-                  <Thermometer size={14} color={Colors.text} strokeWidth={1.6} />
-                  <Text style={styles.locationValue}>{locationWeather.temp}°{locationWeather.useCelsius ? 'C' : 'F'}</Text>
+                  <Thermometer size={14} color={colors.text} strokeWidth={1.6} />
+                  <Text style={[styles.locationValue, { color: colors.text }]}>{displayTemp(locationWeather.tempC)}{tempUnit}</Text>
                 </View>
                 <View style={styles.locationDetail}>
-                  <Droplets size={14} color={Colors.accent} strokeWidth={1.6} />
-                  <Text style={styles.locationValue}>{locationWeather.humidity}%</Text>
+                  <Droplets size={14} color={colors.accent} strokeWidth={1.6} />
+                  <Text style={[styles.locationValue, { color: colors.text }]}>{locationWeather.humidity}%</Text>
                 </View>
                 <View style={styles.locationDetail}>
-                  <Wind size={14} color={Colors.textSecondary} strokeWidth={1.6} />
-                  <Text style={styles.locationValue}>{locationWeather.windSpeed} {locationWeather.useCelsius ? 'km/h' : 'mph'}</Text>
+                  <Wind size={14} color={colors.textSecondary} strokeWidth={1.6} />
+                  <Text style={[styles.locationValue, { color: colors.text }]}>{windDisplay}</Text>
                 </View>
                 <View style={styles.locationDetail}>
-                  <CloudSun size={14} color={Colors.warning} strokeWidth={1.6} />
-                  <Text style={styles.locationValue}>{locationWeather.description}</Text>
+                  <CloudSun size={14} color={colors.warning} strokeWidth={1.6} />
+                  <Text style={[styles.locationValue, { color: colors.text }]}>{locationWeather.description}</Text>
                 </View>
               </View>
             </GlassCard>
@@ -391,16 +392,16 @@ export default function ProfileScreen() {
                     item.type === 'tip' && { backgroundColor: 'rgba(48, 209, 88, 0.1)' },
                   ]}>
                     {item.type === 'warning' ? (
-                      <AlertTriangle size={14} color={Colors.warning} strokeWidth={1.8} />
+                      <AlertTriangle size={14} color={colors.warning} strokeWidth={1.8} />
                     ) : item.type === 'info' ? (
-                      <Droplets size={14} color={Colors.accent} strokeWidth={1.8} />
+                      <Droplets size={14} color={colors.accent} strokeWidth={1.8} />
                     ) : (
-                      <Leaf size={14} color={Colors.primary} strokeWidth={1.8} />
+                      <Leaf size={14} color={colors.primary} strokeWidth={1.8} />
                     )}
                   </View>
                   <View style={styles.careAdviceContent}>
-                    <Text style={styles.careAdviceTitle}>{item.title}</Text>
-                    <Text style={styles.careAdviceMessage}>{item.message}</Text>
+                    <Text style={[styles.careAdviceTitle, { color: colors.text }]}>{item.title}</Text>
+                    <Text style={[styles.careAdviceMessage, { color: colors.textSecondary }]}>{item.message}</Text>
                   </View>
                 </View>
               </GlassCard>
@@ -409,37 +410,38 @@ export default function ProfileScreen() {
         )}
 
         <View style={styles.sectionHeader}>
-          <Leaf size={16} color={Colors.primary} strokeWidth={1.8} />
-          <Text style={styles.sectionTitle}>Plant Health Overview</Text>
+          <Leaf size={16} color={colors.primary} strokeWidth={1.8} />
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Plant Health Overview</Text>
         </View>
 
         {healthOverview.length === 0 ? (
           <GlassCard style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No plants yet. Add some to see their health!</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No plants yet. Add some to see their health!</Text>
           </GlassCard>
         ) : (
           <GlassCard style={styles.healthCard}>
             {healthOverview.map((p, i) => (
               <View
                 key={p.id}
-                style={[styles.healthRow, i < healthOverview.length - 1 && styles.healthRowBorder]}
+                style={[styles.healthRow, i < healthOverview.length - 1 && [styles.healthRowBorder, { borderBottomColor: colors.divider }]]}
               >
                 <Image source={{ uri: p.image }} style={styles.healthPlantImage} />
                 <View style={styles.healthInfo}>
-                  <Text style={styles.healthName} numberOfLines={1}>{p.name}</Text>
+                  <Text style={[styles.healthName, { color: colors.text }]} numberOfLines={1}>{p.name}</Text>
                   <View style={styles.healthMeta}>
-                    <Text style={styles.streakMini}>🔥 {p.streak}d</Text>
+                    <Text style={[styles.streakMini, { color: colors.streak }]}>🔥 {p.streak}d</Text>
                   </View>
                 </View>
                 <HealthDots health={p.health} />
                 <View style={[
                   styles.trendBadge,
-                  p.trend === 'up' && styles.trendUp,
-                  p.trend === 'down' && styles.trendDown,
+                  p.trend === 'up' && { backgroundColor: 'rgba(52, 199, 89, 0.1)' },
+                  p.trend === 'down' && { backgroundColor: 'rgba(255, 59, 48, 0.1)' },
+                  p.trend === 'stable' && { backgroundColor: colors.inputBackground },
                 ]}>
                   <TrendingUp
                     size={11}
-                    color={p.trend === 'up' ? Colors.success : p.trend === 'down' ? Colors.error : Colors.textSecondary}
+                    color={p.trend === 'up' ? colors.success : p.trend === 'down' ? colors.error : colors.textSecondary}
                     style={p.trend === 'down' ? { transform: [{ rotate: '180deg' }] } : undefined}
                     strokeWidth={1.8}
                   />
@@ -458,7 +460,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   container: {
     flex: 1,
@@ -493,11 +494,9 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: Colors.primary,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderWidth: 2,
-    borderColor: Colors.cardSolid || '#fff',
   },
   profileInfo: {
     flex: 1,
@@ -510,14 +509,12 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 22,
     fontWeight: '700' as const,
-    color: Colors.text,
     letterSpacing: -0.4,
   },
   editIconBtn: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(142, 142, 147, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -530,9 +527,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: '600' as const,
-    color: Colors.text,
     borderBottomWidth: 2,
-    borderBottomColor: Colors.primary,
     paddingVertical: 4,
     paddingHorizontal: 0,
   },
@@ -540,7 +535,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(142, 142, 147, 0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -556,20 +550,17 @@ const styles = StyleSheet.create({
   rankText: {
     fontSize: 14,
     fontWeight: '500' as const,
-    color: Colors.textSecondary,
   },
   xpSection: {
     marginTop: 16,
   },
   xpBarTrack: {
     height: 6,
-    backgroundColor: 'rgba(60, 60, 67, 0.06)',
     borderRadius: 3,
     overflow: 'hidden',
   },
   xpBarFill: {
     height: 6,
-    backgroundColor: Colors.accent,
     borderRadius: 3,
   },
   xpLabelRow: {
@@ -586,11 +577,9 @@ const styles = StyleSheet.create({
   xpBadgeText: {
     fontSize: 12,
     fontWeight: '600' as const,
-    color: Colors.accent,
   },
   xpToNext: {
     fontSize: 11,
-    color: Colors.textSecondary,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -608,13 +597,11 @@ const styles = StyleSheet.create({
   miniStatValue: {
     fontSize: 22,
     fontWeight: '700' as const,
-    color: Colors.text,
     letterSpacing: -0.4,
   },
   miniStatLabel: {
     fontSize: 11,
     fontWeight: '400' as const,
-    color: Colors.textSecondary,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -626,7 +613,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600' as const,
-    color: Colors.text,
     letterSpacing: -0.3,
   },
   locationCard: {
@@ -647,7 +633,6 @@ const styles = StyleSheet.create({
   locationValue: {
     fontSize: 13,
     fontWeight: '500' as const,
-    color: Colors.text,
   },
   careAdviceCard: {
     padding: 14,
@@ -672,13 +657,11 @@ const styles = StyleSheet.create({
   careAdviceTitle: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: Colors.text,
     marginBottom: 2,
   },
   careAdviceMessage: {
     fontSize: 13,
     fontWeight: '400' as const,
-    color: Colors.textSecondary,
     lineHeight: 18,
   },
   healthCard: {
@@ -692,7 +675,6 @@ const styles = StyleSheet.create({
   },
   healthRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.divider,
   },
   healthPlantImage: {
     width: 40,
@@ -705,7 +687,6 @@ const styles = StyleSheet.create({
   healthName: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: Colors.text,
   },
   healthMeta: {
     flexDirection: 'row',
@@ -714,7 +695,6 @@ const styles = StyleSheet.create({
   },
   streakMini: {
     fontSize: 11,
-    color: Colors.streak,
   },
   trendBadge: {
     width: 26,
@@ -722,13 +702,6 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(142, 142, 147, 0.1)',
-  },
-  trendUp: {
-    backgroundColor: 'rgba(52, 199, 89, 0.1)',
-  },
-  trendDown: {
-    backgroundColor: 'rgba(255, 59, 48, 0.1)',
   },
   emptyCard: {
     padding: 24,
@@ -736,7 +709,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: Colors.textSecondary,
     textAlign: 'center',
   },
 });
