@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PlantProvider } from "@/providers/PlantProvider";
@@ -9,7 +9,11 @@ import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import { trpc, trpcClient } from "@/lib/trpc";
 import Colors from "@/constants/colors";
 
-SplashScreen.preventAutoHideAsync();
+try {
+  SplashScreen.preventAutoHideAsync();
+} catch (e) {
+  console.log('[Layout] SplashScreen.preventAutoHideAsync error:', e);
+}
 
 const queryClient = new QueryClient();
 

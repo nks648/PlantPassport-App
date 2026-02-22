@@ -17,18 +17,38 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      console.log('[Auth] Initial session:', currentSession ? 'exists' : 'none');
-      setSession(currentSession);
-      setIsLoading(false);
-    });
+    let subscription: { unsubscribe: () => void } | null = null;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      console.log('[Auth] State changed:', _event, newSession ? 'session exists' : 'no session');
-      setSession(newSession);
-    });
+    const init = async () => {
+      try {
+        console.log('[Auth] Getting initial session...');
+        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
+        const sessionPromise = supabase.auth.getSession().then(({ data }) => data.session);
+        const currentSession = await Promise.race([sessionPromise, timeoutPromise]);
+        console.log('[Auth] Initial session:', currentSession ? 'exists' : 'none');
+        setSession(currentSession);
+      } catch (e) {
+        console.log('[Auth] Error getting session:', e);
+      } finally {
+        setIsLoading(false);
+      }
 
-    return () => subscription.unsubscribe();
+      try {
+        const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
+          console.log('[Auth] State changed:', _event, newSession ? 'session exists' : 'no session');
+          setSession(newSession);
+        });
+        subscription = data.subscription;
+      } catch (e) {
+        console.log('[Auth] Error setting up auth listener:', e);
+      }
+    };
+
+    init();
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const signInAnonymously = async () => {
