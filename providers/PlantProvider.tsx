@@ -118,6 +118,14 @@ export const [PlantProvider, usePlants] = createContextHook(() => {
     if (profileQuery.data) setUserProfile(profileQuery.data);
   }, [profileQuery.data]);
 
+  const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
+    const updatedProfile: UserProfile = { ...userProfile, ...updates };
+    setUserProfile(updatedProfile);
+    await AsyncStorage.setItem(STORAGE_KEYS.userProfile, JSON.stringify(updatedProfile));
+    console.log('Profile updated:', updates);
+    return updatedProfile;
+  }, [userProfile]);
+
   const addXP = useCallback(async (amount: number, reason: string) => {
     const newXP = userProfile.xp + amount;
     const rankInfo = getRankForXP(newXP);
@@ -373,5 +381,6 @@ export const [PlantProvider, usePlants] = createContextHook(() => {
     isRemovingPlant: removePlantMutation.isPending,
     checkOverwatering,
     addXP,
+    updateProfile,
   };
 });

@@ -10,6 +10,7 @@ import { getRankForXP } from '@/types/plant';
 import GlassCard from '@/components/GlassCard';
 import WateringChart from '@/components/WateringChart';
 import ActivityTimelineItem from '@/components/ActivityTimelineItem';
+import WeatherWidget from '@/components/WeatherWidget';
 
 export default function HomeScreen() {
   const {
@@ -88,7 +89,7 @@ export default function HomeScreen() {
             activeOpacity={0.75}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push('/(tabs)/history' as never);
+              router.push('/(tabs)/profile' as never);
             }}
             style={styles.statTouchable}
           >
@@ -102,6 +103,11 @@ export default function HomeScreen() {
             </GlassCard>
           </TouchableOpacity>
         </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Weather & Care</Text>
+        </View>
+        <WeatherWidget />
 
         <WateringChart />
 

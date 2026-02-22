@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Home, Leaf, Clock, Users, Trophy } from 'lucide-react-native';
+import { Home, Leaf, User, Users, Trophy } from 'lucide-react-native';
 import { Platform, StyleSheet } from 'react-native';
 import Colors from '@/constants/colors';
 
@@ -53,11 +53,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="history"
+        name="profile"
         options={{
-          title: 'History',
+          title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
-            <Clock size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2 : 1.6} />
+            <User size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2 : 1.6} />
           ),
         }}
       />
