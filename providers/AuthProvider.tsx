@@ -55,7 +55,7 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
         return;
       }
 
-      const redirectUrl = makeRedirectUri();
+      const redirectUrl = makeRedirectUri({ scheme: 'rork-app', path: 'auth/callback' });
       console.log('[Auth] Redirect URL:', redirectUrl);
 
       const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(redirectUrl)}`;
