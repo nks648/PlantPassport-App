@@ -97,8 +97,8 @@ export default React.memo(function PlantNeedsCard({ needs }: PlantNeedsCardProps
                 style={[
                   styles.tempRange,
                   {
-                    left: `${((tempBar.min - tempBar.scaleMin) / scaleRange) * 100}%` as string,
-                    right: `${100 - ((tempBar.max - tempBar.scaleMin) / scaleRange) * 100}%` as string,
+                    left: `${((tempBar.min - tempBar.scaleMin) / scaleRange) * 100}%` as `${number}%`,
+                    right: `${100 - ((tempBar.max - tempBar.scaleMin) / scaleRange) * 100}%` as `${number}%`,
                   },
                 ]}
               />

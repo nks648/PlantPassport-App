@@ -16,7 +16,7 @@ export default function HomeLayout() {
         name="index"
         options={{
           title: 'Plant Passport',
-          headerTitleStyle: { fontWeight: '700', fontSize: 22, letterSpacing: -0.4 },
+          headerTitleStyle: { fontWeight: '700', fontSize: 22 },
         }}
       />
     </Stack>

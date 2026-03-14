@@ -89,7 +89,7 @@ export default function PlantDetailScreen() {
           title: plant.name,
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.text,
-          headerTitleStyle: { fontWeight: '600' as const, fontSize: 17, letterSpacing: -0.2, color: colors.text },
+          headerTitleStyle: { fontWeight: '600' as const, fontSize: 17, color: colors.text },
           headerRight: () => (
             <View style={styles.headerActions}>
               <TouchableOpacity

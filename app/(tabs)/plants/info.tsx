@@ -112,8 +112,8 @@ function NeedsSection({ needs }: { needs: PlantNeeds }) {
                   style={[
                     styles.tempRange,
                     {
-                      left: `${((tempBar.min - tempBar.scaleMin) / scaleRange) * 100}%` as string,
-                      right: `${100 - ((tempBar.max - tempBar.scaleMin) / scaleRange) * 100}%` as string,
+                      left: `${((tempBar.min - tempBar.scaleMin) / scaleRange) * 100}%` as `${number}%`,
+                      right: `${100 - ((tempBar.max - tempBar.scaleMin) / scaleRange) * 100}%` as `${number}%`,
                     },
                   ]}
                 />
@@ -308,7 +308,7 @@ Current plant status: Health ${plant.health}/5, Streak ${plant.streak} days, Wat
           title: `${plant.name} Info`,
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.text,
-          headerTitleStyle: { fontWeight: '600' as const, fontSize: 17, letterSpacing: -0.2, color: colors.text },
+          headerTitleStyle: { fontWeight: '600' as const, fontSize: 17, color: colors.text },
         }}
       />
 

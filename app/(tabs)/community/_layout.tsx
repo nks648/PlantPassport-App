@@ -12,7 +12,7 @@ export default function CommunityLayout() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Community & Ranks', headerTitleStyle: { fontWeight: '700', fontSize: 22, letterSpacing: -0.4 } }} />
+      <Stack.Screen name="index" options={{ title: 'Community & Ranks', headerTitleStyle: { fontWeight: '700', fontSize: 22 } }} />
     </Stack>
   );
 }
