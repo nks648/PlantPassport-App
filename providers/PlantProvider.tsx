@@ -305,7 +305,7 @@ export const [PlantProvider, usePlants] = createContextHook(() => {
 
       const newActivity: ActivityItem = {
         id: `a_rm_${Date.now()}`,
-        type: 'new_plant',
+        type: 'remove_plant',
         plantName: plant.name,
         date: new Date().toISOString().split('T')[0],
         description: `Removed ${plant.name} from collection`,

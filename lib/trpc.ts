@@ -11,7 +11,7 @@ const getBaseUrl = () => {
 
   if (!url) {
     console.warn("EXPO_PUBLIC_RORK_API_BASE_URL is not set, using fallback");
-    return "https://localhost:3000";
+    return "http://localhost:3000";
   }
 
   return url;

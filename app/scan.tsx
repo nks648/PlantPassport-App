@@ -315,7 +315,7 @@ export default function ScanScreen() {
         confidence: '90',
         notes: result.description,
         possibleMatches: '[]',
-        imageUri: `https://source.unsplash.com/400x400/?${encodeURIComponent(result.imageKeyword + ' plant')}`,
+        imageUri: `https://picsum.photos/seed/${encodeURIComponent(result.imageKeyword)}/400/400`,
       },
     });
   }, [router]);

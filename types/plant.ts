@@ -58,7 +58,7 @@ export interface LeaderboardEntry {
 
 export interface ActivityItem {
   id: string;
-  type: 'water' | 'health_check' | 'new_plant' | 'streak_milestone' | 'badge_earned' | 'level_up';
+  type: 'water' | 'health_check' | 'new_plant' | 'remove_plant' | 'streak_milestone' | 'badge_earned' | 'level_up';
   plantName: string;
   date: string;
   description: string;

@@ -16,6 +16,7 @@ export default function ActivityTimelineItem({ item, isLast = false }: ActivityT
     water: { icon: Droplets, color: colors.accent },
     health_check: { icon: Heart, color: colors.error },
     new_plant: { icon: Leaf, color: colors.primary },
+    remove_plant: { icon: Leaf, color: colors.error },
     streak_milestone: { icon: Flame, color: colors.streak },
     badge_earned: { icon: Award, color: colors.gold },
     level_up: { icon: TrendingUp, color: colors.xpPurple },
