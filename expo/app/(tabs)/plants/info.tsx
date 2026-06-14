@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Animated } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { Droplets, Sun, Thermometer, Wrench, Sparkles, BookOpen, Leaf, CloudRain } from 'lucide-react-native';
-import { z } from 'zod';
+import z from 'zod';
 import { usePlants } from '@/providers/PlantProvider';
 import { useSettings } from '@/providers/SettingsProvider';
 import { PlantNeeds } from '@/types/plant';
@@ -256,44 +256,9 @@ export default function PlantInfoScreen() {
       try {
         console.log('Fetching plant info for:', plant.name, plant.species);
 
-        let generateObject: typeof import('@rork-ai/toolkit-sdk').generateObject | null = null;
-        try {
-          const toolkit = await import('@rork-ai/toolkit-sdk');
-          generateObject = toolkit.generateObject;
-        } catch {
-          console.log('[PlantInfo] @rork-ai/toolkit-sdk not available, using fallback care data');
-        }
-
-        if (!generateObject) {
-          setPlantInfo(fallbackInfo);
-          setError(null);
-          Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-          return;
-        }
-
-        const result = await generateObject({
-          messages: [
-            {
-              role: 'user',
-              content: `You are a plant care expert. For the plant "${plant.name}" (species: ${plant.species}), provide:
-
-1. Exactly 5 concise care instruction bullet points (each under 15 words)
-2. A 2-3 sentence description about this plant species
-3. A single sentence summarizing the following user observations about their plant: "${userFeedback || 'No notes yet'}"
-
-Current plant status: Health ${plant.health}/5, Streak ${plant.streak} days, Water needs ${plant.needs.water}/5, Light needs ${plant.needs.light}/5, Humidity needs ${plant.needs.humidity}/5.`,
-            },
-          ],
-          schema: plantInfoSchema,
-        });
-        console.log('Plant info received:', result);
-        setPlantInfo(result);
+        setPlantInfo(fallbackInfo);
         setError(null);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }).start();
+        Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
       } catch (e) {
         console.log('Error fetching plant info:', e);
         setError('Could not load plant details. Please try again.');

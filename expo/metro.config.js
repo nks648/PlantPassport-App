@@ -1,5 +1,11 @@
 const { getDefaultConfig } = require("expo/metro-config");
-const { withRorkMetro } = require("@rork-ai/toolkit-sdk/metro");
+
+let withRorkMetro;
+try {
+  withRorkMetro = require("@rork-ai/toolkit-sdk/metro").withRorkMetro;
+} catch {
+  withRorkMetro = (config) => config;
+}
 
 const config = getDefaultConfig(__dirname);
 
