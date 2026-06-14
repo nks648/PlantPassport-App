@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Animated } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { Droplets, Sun, Thermometer, Wrench, Sparkles, BookOpen, Leaf, CloudRain } from 'lucide-react-native';
-import { generateObject } from '@rork-ai/toolkit-sdk';
 import { z } from 'zod';
 import { usePlants } from '@/providers/PlantProvider';
 import { useSettings } from '@/providers/SettingsProvider';
@@ -242,8 +241,36 @@ export default function PlantInfoScreen() {
     ].filter(Boolean).join('. ');
 
     const fetchPlantInfo = async () => {
+      const fallbackInfo: PlantInfo = {
+        careInstructions: [
+          'Water when top inch of soil feels dry',
+          'Provide bright, indirect sunlight for best growth',
+          'Maintain humidity above 50% if possible',
+          'Fertilize monthly during growing season',
+          'Wipe leaves regularly to remove dust',
+        ],
+        about: `${plant.name} (${plant.species}) is a popular houseplant known for its beautiful foliage. It thrives in indoor conditions and is a wonderful addition to any plant collection.`,
+        feedbackSummary: userFeedback || 'No user observations recorded yet.',
+      };
+
       try {
         console.log('Fetching plant info for:', plant.name, plant.species);
+
+        let generateObject: typeof import('@rork-ai/toolkit-sdk').generateObject | null = null;
+        try {
+          const toolkit = await import('@rork-ai/toolkit-sdk');
+          generateObject = toolkit.generateObject;
+        } catch {
+          console.log('[PlantInfo] @rork-ai/toolkit-sdk not available, using fallback care data');
+        }
+
+        if (!generateObject) {
+          setPlantInfo(fallbackInfo);
+          setError(null);
+          Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+          return;
+        }
+
         const result = await generateObject({
           messages: [
             {
@@ -270,17 +297,7 @@ Current plant status: Health ${plant.health}/5, Streak ${plant.streak} days, Wat
       } catch (e) {
         console.log('Error fetching plant info:', e);
         setError('Could not load plant details. Please try again.');
-        setPlantInfo({
-          careInstructions: [
-            'Water when top inch of soil feels dry',
-            'Provide bright, indirect sunlight for best growth',
-            'Maintain humidity above 50% if possible',
-            'Fertilize monthly during growing season',
-            'Wipe leaves regularly to remove dust',
-          ],
-          about: `${plant.name} (${plant.species}) is a popular houseplant known for its beautiful foliage. It thrives in indoor conditions and is a wonderful addition to any plant collection.`,
-          feedbackSummary: userFeedback || 'No user observations recorded yet.',
-        });
+        setPlantInfo(fallbackInfo);
       } finally {
         setIsLoading(false);
       }

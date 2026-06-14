@@ -6,22 +6,31 @@ import type { AppRouter } from "@/backend/trpc/app-router";
 
 export const trpc = createTRPCReact<AppRouter>();
 
-const getBaseUrl = () => {
+export function getTrpcUrl(): string | null {
   const url = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
 
   if (!url) {
-    console.warn("EXPO_PUBLIC_RORK_API_BASE_URL is not set, using fallback");
-    return "http://localhost:3000";
+    console.warn("EXPO_PUBLIC_RORK_API_BASE_URL is not set — tRPC calls will fail");
+    return null;
   }
 
-  return url;
-};
+  return `${url}/api/trpc`;
+}
 
-export const trpcClient = trpc.createClient({
-  links: [
-    httpLink({
-      url: `${getBaseUrl()}/api/trpc`,
-      transformer: superjson,
-    }),
-  ],
-});
+function createTrpcClient() {
+  const trpcUrl = getTrpcUrl();
+  if (!trpcUrl) {
+    console.warn("[tRPC] No API base URL configured, creating client with placeholder URL");
+  }
+
+  return trpc.createClient({
+    links: [
+      httpLink({
+        url: trpcUrl || "http://localhost:3000/api/trpc",
+        transformer: superjson,
+      }),
+    ],
+  });
+}
+
+export const trpcClient = createTrpcClient();

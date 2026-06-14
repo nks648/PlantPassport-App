@@ -20,6 +20,12 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
     let subscription: { unsubscribe: () => void } | null = null;
 
     const init = async () => {
+      if (!supabase) {
+        console.log('[Auth] Supabase not configured, skipping auth');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         console.log('[Auth] Getting initial session...');
         const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
@@ -52,6 +58,10 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
   }, []);
 
   const signInAnonymously = async () => {
+    if (!supabase) {
+      console.log('[Auth] Supabase not configured, skipping sign in');
+      return;
+    }
     try {
       setIsAuthenticating(true);
       console.log('[Auth] Starting anonymous sign in');
@@ -74,6 +84,7 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
   };
 
   const signOut = async () => {
+    if (!supabase) return;
     try {
       console.log('[Auth] Signing out');
       const { error } = await supabase.auth.signOut();
