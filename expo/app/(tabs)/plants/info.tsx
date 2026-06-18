@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Animated } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { Droplets, Sun, Thermometer, Wrench, Sparkles, BookOpen, Leaf, CloudRain } from 'lucide-react-native';
-import z from 'zod';
+import { z } from 'zod';
 import { usePlants } from '@/providers/PlantProvider';
 import { useSettings } from '@/providers/SettingsProvider';
 import { PlantNeeds } from '@/types/plant';
