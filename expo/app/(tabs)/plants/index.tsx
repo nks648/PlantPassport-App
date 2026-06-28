@@ -118,7 +118,7 @@ export default function PlantsScreen() {
               </TouchableOpacity>
             )}
             {expandedId === plant.id && plant.needs && (
-              <PlantNeedsCard needs={plant.needs} />
+              <PlantNeedsCard needs={plant.needs} wateringFrequencyDays={plant.wateringFrequencyDays} />
             )}
           </View>
         ))}

@@ -250,7 +250,7 @@ export default function ScanResultScreen() {
 
           <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
             <View style={styles.careCardWrap}>
-              <PlantNeedsCard needs={needs} />
+              <PlantNeedsCard needs={needs} wateringFrequencyDays={wateringFrequencyDays} />
             </View>
           </Animated.View>
 

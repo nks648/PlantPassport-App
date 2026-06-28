@@ -1,9 +1,9 @@
 import { PlantNeeds } from '@/types/plant';
 
-const TOOLKIT_URL = process.env.EXPO_PUBLIC_TOOLKIT_URL ?? '';
-const SECRET_KEY = process.env.EXPO_PUBLIC_RORK_TOOLKIT_SECRET_KEY ?? '';
-const CHAT_URL = `${TOOLKIT_URL}/v2/vercel/v1/chat/completions`;
-const MODEL = 'google/gemini-2.5-flash';
+const GEMINI_API_KEY =
+  process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? 'AIzaSyB6O1XYsveU1JyVTEXehgkHBsYjKArh0J4';
+const MODEL = 'gemini-2.0-flash';
+const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 export interface PlantIdentification {
   commonName: string | null;
@@ -82,7 +82,7 @@ function normalizeNeeds(care: any): { needs: PlantNeeds; wateringFrequencyDays: 
     min = max;
     max = tmp;
   }
-  const freqRaw = typeof c.wateringFrequencyDays === 'number' ? Math.round(c.wateringFrequencyDays) : 3;
+  const freqRaw = typeof c.wateringFrequencyDays === 'number' ? Math.round(c.wateringFrequencyDays) : 7;
   const wateringFrequencyDays = Math.min(30, Math.max(1, freqRaw));
   return {
     needs: {
@@ -113,30 +113,36 @@ function extractJSON(text: string): any {
   }
 }
 
-interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string | { type: string; text?: string; image_url?: { url: string } }[];
-}
+type GeminiPart =
+  | { text: string }
+  | { inline_data: { mime_type: string; data: string } };
 
-async function callChat(messages: ChatMessage[], maxRetries = 3): Promise<string> {
-  if (!TOOLKIT_URL || !SECRET_KEY) {
+/**
+ * Call Google Gemini directly with structured JSON output. Using the REST API
+ * keeps latency low (no proxy hop) and returns parseable JSON via responseMimeType.
+ */
+async function callGemini(parts: GeminiPart[], maxRetries = 2): Promise<string> {
+  if (!GEMINI_API_KEY) {
     throw new Error('AI service is not configured.');
   }
-  const baseDelays = [1500, 3000, 6000];
+  const baseDelays = [1000, 2500];
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (attempt > 0) {
-      const jitter = Math.random() * 600;
-      await new Promise((r) => setTimeout(r, baseDelays[attempt - 1] + jitter));
+      await new Promise((r) => setTimeout(r, baseDelays[attempt - 1] + Math.random() * 400));
     }
     try {
-      const response = await fetch(CHAT_URL, {
+      const response = await fetch(`${ENDPOINT}?key=${GEMINI_API_KEY}`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${SECRET_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ model: MODEL, messages, temperature: 0.2, max_tokens: 1200 }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 1200,
+            responseMimeType: 'application/json',
+          },
+        }),
       });
 
       if (response.status === 429 || response.status >= 500) {
@@ -160,7 +166,10 @@ async function callChat(messages: ChatMessage[], maxRetries = 3): Promise<string
       } catch {
         throw new Error('Unexpected response. Please try again.');
       }
-      const content = data?.choices?.[0]?.message?.content;
+      const content = data?.candidates?.[0]?.content?.parts
+        ?.map((p: any) => (typeof p?.text === 'string' ? p.text : ''))
+        .join('')
+        .trim();
       if (typeof content !== 'string' || content.length === 0) {
         throw new Error('No result returned. Please try again.');
       }
@@ -177,18 +186,13 @@ async function callChat(messages: ChatMessage[], maxRetries = 3): Promise<string
 
 /** Identify a plant from a base64-encoded JPEG image, returning a species-specific care profile. */
 export async function identifyPlantFromImage(imageBase64: string): Promise<PlantIdentification> {
-  const dataUri = imageBase64.startsWith('data:')
-    ? imageBase64
-    : `data:image/jpeg;base64,${imageBase64}`;
+  const base64 = imageBase64.startsWith('data:')
+    ? imageBase64.split(',')[1] ?? imageBase64
+    : imageBase64;
 
-  const content = await callChat([
-    {
-      role: 'user',
-      content: [
-        { type: 'text', text: IDENTIFY_PROMPT },
-        { type: 'image_url', image_url: { url: dataUri } },
-      ],
-    },
+  const content = await callGemini([
+    { text: IDENTIFY_PROMPT },
+    { inline_data: { mime_type: 'image/jpeg', data: base64 } },
   ]);
 
   const parsed = extractJSON(content);
@@ -213,14 +217,13 @@ export async function identifyPlantFromImage(imageBase64: string): Promise<Plant
 
 /** Search for plants by name, returning each plant's species-specific care profile. */
 export async function searchPlantsByName(query: string): Promise<PlantSearchResult[]> {
-  const content = await callChat([
-    { role: 'user', content: SEARCH_PROMPT.replace('{QUERY}', query) },
-  ]);
+  const content = await callGemini([{ text: SEARCH_PROMPT.replace('{QUERY}', query) }]);
 
   const parsed = extractJSON(content);
-  if (!Array.isArray(parsed)) return [];
+  const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.plants) ? parsed.plants : [];
+  if (!Array.isArray(list)) return [];
 
-  return parsed.slice(0, 5).map((item: any) => {
+  return list.slice(0, 5).map((item: any) => {
     const { needs, wateringFrequencyDays } = normalizeNeeds(item?.care);
     return {
       commonName: item?.commonName ?? 'Unknown',
