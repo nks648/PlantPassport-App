@@ -7,6 +7,11 @@ export interface PlantNeeds {
   easeOfCare: number;
 }
 
+export interface PlantCareGuide {
+  careInstructions: string[];
+  about: string;
+}
+
 export interface Plant {
   id: string;
   name: string;
@@ -19,6 +24,7 @@ export interface Plant {
   notes: string[];
   needs: PlantNeeds;
   wateringFrequencyDays?: number;
+  careGuide?: PlantCareGuide;
 }
 
 export interface WaterLog {

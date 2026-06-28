@@ -216,7 +216,7 @@ export default function PlantInfoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { plants, waterLogs } = usePlants();
+  const { plants, waterLogs, updatePlant } = usePlants();
   const { colors } = useSettings();
   const plant = plants.find((p) => p.id === id);
 
@@ -257,6 +257,23 @@ export default function PlantInfoScreen() {
       feedbackSummary: userFeedback || '',
     };
 
+    const reveal = () => {
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    };
+
+    // If this plant already has a stored care guide, use it directly — no regeneration.
+    if (plant.careGuide && plant.careGuide.careInstructions.length >= 3) {
+      setPlantInfo({
+        careInstructions: plant.careGuide.careInstructions,
+        about: plant.careGuide.about || fallbackInfo.about,
+        feedbackSummary: userFeedback || '',
+      });
+      setIsLoading(false);
+      setError(null);
+      reveal();
+      return;
+    }
+
     let cancelled = false;
     setIsLoading(true);
     setError(null);
@@ -265,12 +282,20 @@ export default function PlantInfoScreen() {
       try {
         const guide = await generateCareGuide(plant.name, plant.species, userFeedback);
         if (cancelled) return;
+        const careInstructions = guide.careInstructions.length >= 3 ? guide.careInstructions : fallbackInfo.careInstructions;
+        const about = guide.about || fallbackInfo.about;
         setPlantInfo({
-          careInstructions: guide.careInstructions.length >= 3 ? guide.careInstructions : fallbackInfo.careInstructions,
-          about: guide.about || fallbackInfo.about,
+          careInstructions,
+          about,
           feedbackSummary: guide.feedbackSummary || userFeedback || '',
         });
         setError(null);
+        // Persist the generated guide so it never has to be regenerated again.
+        if (guide.careInstructions.length >= 3) {
+          updatePlant(plant.id, { careGuide: { careInstructions, about } }).catch((err) =>
+            console.log('Failed to persist care guide:', err)
+          );
+        }
       } catch (e) {
         if (cancelled) return;
         console.log('Error fetching plant info:', e);
@@ -279,7 +304,7 @@ export default function PlantInfoScreen() {
       } finally {
         if (cancelled) return;
         setIsLoading(false);
-        Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+        reveal();
       }
     };
 

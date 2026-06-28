@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Animated,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,6 +19,7 @@ import { usePlants } from '@/providers/PlantProvider';
 import { useSettings } from '@/providers/SettingsProvider';
 import { Plant, PlantNeeds } from '@/types/plant';
 import PlantNeedsCard from '@/components/PlantNeedsCard';
+import { generateCareGuide } from '@/lib/plantAI';
 
 const DEFAULT_NEEDS: PlantNeeds = {
   water: 3,
@@ -119,6 +121,7 @@ export default function ScanResultScreen() {
     imageUri: string;
   }>();
   const { addPlant, plants } = usePlants();
+  const [isAdding, setIsAdding] = useState<boolean>(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -151,6 +154,7 @@ export default function ScanResultScreen() {
   const displayImage = params.imageUri || 'https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=600&h=600&fit=crop';
 
   const handleAddPlant = useCallback(async () => {
+    if (isAdding) return;
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -162,10 +166,26 @@ export default function ScanResultScreen() {
         return;
       }
 
+      setIsAdding(true);
+
+      const name = params.name || 'Unknown Plant';
+      const species = params.species || 'Unknown Species';
+
+      // Generate the species-specific care guide ONCE, at add time, then persist it.
+      let careGuide: { careInstructions: string[]; about: string } | undefined;
+      try {
+        const guide = await generateCareGuide(name, species, notes);
+        if (guide.careInstructions.length >= 3 || guide.about) {
+          careGuide = { careInstructions: guide.careInstructions, about: guide.about };
+        }
+      } catch (e) {
+        console.log('[ScanResult] Care guide generation failed, will generate later:', e);
+      }
+
       const newPlant: Plant = {
         id: `plant_${Date.now()}`,
-        name: params.name || 'Unknown Plant',
-        species: params.species || 'Unknown Species',
+        name,
+        species,
         image: displayImage,
         health: 4,
         streak: 0,
@@ -174,19 +194,22 @@ export default function ScanResultScreen() {
         notes: notes ? [notes] : [],
         needs,
         wateringFrequencyDays,
+        careGuide,
       };
 
       await addPlant(newPlant);
       Alert.alert(
         'Plant Added!',
-        `${params.name} has been added to your garden.`,
+        `${name} has been added to your garden.`,
         [{ text: 'View My Plants', onPress: () => router.replace('/(tabs)/plants' as never) }]
       );
     } catch (e) {
       console.log('[ScanResult] Error adding plant:', e);
       Alert.alert('Error', 'Failed to add plant. Please try again.');
+    } finally {
+      setIsAdding(false);
     }
-  }, [params, plants, addPlant, router, displayImage, notes, needs, wateringFrequencyDays]);
+  }, [isAdding, params, plants, addPlant, router, displayImage, notes, needs, wateringFrequencyDays]);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -266,9 +289,18 @@ export default function ScanResultScreen() {
       </SafeAreaView>
 
       <SafeAreaView edges={['bottom']} style={[styles.bottomBar, { backgroundColor: colors.elevatedBackground, borderTopColor: colors.divider }]}>
-        <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.primary }]} onPress={handleAddPlant} activeOpacity={0.85}>
-          <Plus size={20} color="#fff" strokeWidth={2.5} />
-          <Text style={styles.addButtonText}>Add to My Plants</Text>
+        <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.primary }, isAdding && styles.addButtonDisabled]} onPress={handleAddPlant} activeOpacity={0.85} disabled={isAdding}>
+          {isAdding ? (
+            <>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={styles.addButtonText}>Building care guide…</Text>
+            </>
+          ) : (
+            <>
+              <Plus size={20} color="#fff" strokeWidth={2.5} />
+              <Text style={styles.addButtonText}>Add to My Plants</Text>
+            </>
+          )}
         </TouchableOpacity>
       </SafeAreaView>
     </View>
@@ -316,5 +348,6 @@ const styles = StyleSheet.create({
   bottomPad: { height: 100 },
   bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20, paddingTop: 12 },
   addButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, borderRadius: 14, ...Platform.select({ ios: { shadowColor: '#30D158', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 8 }, android: { elevation: 4 }, default: { shadowColor: '#30D158', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 8 } }) },
+  addButtonDisabled: { opacity: 0.7 },
   addButtonText: { color: '#fff', fontSize: 17, fontWeight: '600' as const },
 });

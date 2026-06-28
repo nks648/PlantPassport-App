@@ -340,6 +340,13 @@ export const [PlantProvider, usePlants] = createContextHook(() => {
     },
   });
 
+  const updatePlant = useCallback(async (plantId: string, updates: Partial<Plant>) => {
+    const updated = plants.map((p) => (p.id === plantId ? { ...p, ...updates } : p));
+    setPlants(updated);
+    await AsyncStorage.setItem(STORAGE_KEYS.plants, JSON.stringify(updated));
+    return updated.find((p) => p.id === plantId);
+  }, [plants]);
+
   const totalStreak = useMemo(() => plants.reduce((max, p) => Math.max(max, p.streak), 0), [plants]);
   const averageStreak = useMemo(() => {
     if (plants.length === 0) return 0;
@@ -379,6 +386,7 @@ export const [PlantProvider, usePlants] = createContextHook(() => {
     isAddingPlant: addPlantMutation.isPending,
     removePlant: removePlantMutation.mutateAsync,
     isRemovingPlant: removePlantMutation.isPending,
+    updatePlant,
     checkOverwatering,
     addXP,
     updateProfile,

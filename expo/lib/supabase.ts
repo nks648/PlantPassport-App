@@ -1,6 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Platform } from 'react-native';
+import { ACCESS_TOKEN_KEY, getToken } from '@/lib/authTokens';
 
 const SUPABASE_URL = (process.env.EXPO_PUBLIC_SUPABASE_URL || '').trim();
 const SUPABASE_ANON_KEY = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '').trim();
@@ -30,10 +29,14 @@ function getSupabaseSafe(): SupabaseClient | null {
     if (!_supabase) {
       _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: {
-          storage: AsyncStorage,
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: Platform.OS === 'web',
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+        // Feed the Rork Auth JWT to Supabase so RLS (user_id()) works.
+        accessToken: async () => {
+          const token = await getToken(ACCESS_TOKEN_KEY);
+          return token ?? null;
         },
       });
     }
