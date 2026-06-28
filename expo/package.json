@@ -3,9 +3,9 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "bunx rork start -p 7eoplmqo6hy5u1dpbb4go --tunnel",
-    "start-web": "bunx rork start -p 7eoplmqo6hy5u1dpbb4go --web --tunnel",
-    "start-web-dev": "DEBUG=expo* bunx rork start -p 7eoplmqo6hy5u1dpbb4go --web --tunnel",
+    "start": "bunx rork start -p 7eoplmqo6hy5u1dpbb4go",
+    "start-web": "bunx rork start -p 7eoplmqo6hy5u1dpbb4go --web",
+    "start-web-dev": "DEBUG=expo* bunx rork start -p 7eoplmqo6hy5u1dpbb4go --web",
     "lint": "expo lint"
   },
   "dependencies": {
@@ -51,11 +51,11 @@
     "react-native-web": "^0.21.0",
     "superjson": "^2.2.6",
     "zod": "^4.3.6",
-    "zustand": "^5.0.2"
+    "zustand": "^5.0.2",
+    "@rork-ai/toolkit-sdk": "latest"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
-    "@expo/ngrok": "^4.1.0",
     "@types/react": "~19.1.10",
     "eslint": "^9.31.0",
     "eslint-config-expo": "~10.0.0",
