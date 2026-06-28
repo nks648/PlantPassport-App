@@ -22,6 +22,12 @@ export interface PlantSearchResult {
   wateringFrequencyDays: number;
 }
 
+export interface PlantCareGuide {
+  careInstructions: string[];
+  about: string;
+  feedbackSummary: string;
+}
+
 const CARE_SCHEMA = `"care": {
   "water": number (1=very low to 5=very high watering need),
   "light": number (1=low light to 5=full sun),
@@ -46,6 +52,19 @@ Rules:
 - possibleMatches: up to 3 alternative identifications, sorted by confidence descending.
 - If you cannot identify the plant, set commonName and scientificName to null and confidence low, but still give a best-guess generic care profile.
 - confidence values are between 0 and 1.`;
+
+const CARE_GUIDE_PROMPT = `You are an expert botanist writing a care guide for a specific houseplant.
+Plant: "{NAME}" (species: "{SPECIES}").
+The owner's personal notes/observations so far: "{FEEDBACK}".
+Return STRICT JSON only (no markdown fences, no extra text) with exactly these fields:
+{
+  "careInstructions": [string] (exactly 5 concise, species-SPECIFIC care tips for THIS plant — watering, light, soil, feeding, humidity/pruning. Each under 90 characters. Make them genuinely different from generic advice and tailored to this species),
+  "about": string (2-3 sentences about this specific species: its origin, notable traits, and why people grow it),
+  "feedbackSummary": string (one sentence summarizing the owner's notes above; if there are no meaningful notes, return an empty string)
+}
+Rules:
+- careInstructions MUST be specific to {NAME} / {SPECIES}, not generic filler.
+- Do not repeat the same advice across bullets.`;
 
 const SEARCH_PROMPT = `You are an expert botanist. The user is searching for a plant by name: "{QUERY}".
 Return STRICT JSON only (no markdown fences, no extra text): an array of up to 5 matching plants. Each entry:
@@ -213,6 +232,32 @@ export async function identifyPlantFromImage(imageBase64: string): Promise<Plant
           confidence: typeof m?.confidence === 'number' ? m.confidence : 0,
         }))
       : [],
+  };
+}
+
+/** Generate a species-specific care guide (instructions + about + feedback summary) for a plant. */
+export async function generateCareGuide(
+  name: string,
+  species: string,
+  feedback: string
+): Promise<PlantCareGuide> {
+  const prompt = CARE_GUIDE_PROMPT.replace(/\{NAME\}/g, name || 'this plant')
+    .replace(/\{SPECIES\}/g, species || 'unknown species')
+    .replace('{FEEDBACK}', feedback || 'none');
+
+  const content = await callModel([{ text: prompt }]);
+  const parsed = extractJSON(content);
+
+  const rawInstructions = Array.isArray(parsed?.careInstructions) ? parsed.careInstructions : [];
+  const careInstructions = rawInstructions
+    .filter((s: unknown): s is string => typeof s === 'string' && s.trim().length > 0)
+    .map((s: string) => s.trim())
+    .slice(0, 5);
+
+  return {
+    careInstructions,
+    about: typeof parsed?.about === 'string' ? parsed.about.trim() : '',
+    feedbackSummary: typeof parsed?.feedbackSummary === 'string' ? parsed.feedbackSummary.trim() : '',
   };
 }
 

@@ -1,21 +1,20 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Animated } from 'react-native';
-import { useLocalSearchParams, Stack } from 'expo-router';
-import { Droplets, Sun, Thermometer, Wrench, Sparkles, BookOpen, Leaf, CloudRain } from 'lucide-react-native';
-import { z } from 'zod';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Animated, TouchableOpacity } from 'react-native';
+import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Droplets, Sun, Thermometer, Wrench, Sparkles, BookOpen, Leaf, CloudRain, ChevronLeft } from 'lucide-react-native';
 import { usePlants } from '@/providers/PlantProvider';
 import { useSettings } from '@/providers/SettingsProvider';
 import { PlantNeeds } from '@/types/plant';
 import GlassCard from '@/components/GlassCard';
 import { formatTempRange, getTempBarValues } from '@/utils/temperature';
+import { generateCareGuide } from '@/lib/plantAI';
 
-const plantInfoSchema = z.object({
-  careInstructions: z.array(z.string()).describe('Exactly 5 concise care instruction bullet points for this plant'),
-  about: z.string().describe('A 2-3 sentence description about this plant species, its origin, and characteristics'),
-  feedbackSummary: z.string().describe('A single sentence summarizing the user feedback/notes about their plant'),
-});
-
-type PlantInfo = z.infer<typeof plantInfoSchema>;
+interface PlantInfo {
+  careInstructions: string[];
+  about: string;
+  feedbackSummary: string;
+}
 
 const WATER_LABELS = ['', 'Very Low', 'Low', 'Moderate', 'High', 'Very High'];
 const LIGHT_LABELS = ['', 'Low Light', 'Partial Shade', 'Indirect', 'Bright', 'Full Sun'];
@@ -215,9 +214,15 @@ function getBulletColor(index: number, colors: ReturnType<typeof useSettings>['c
 
 export default function PlantInfoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { plants, waterLogs } = usePlants();
   const { colors } = useSettings();
   const plant = plants.find((p) => p.id === id);
+
+  const handleBack = useCallback(() => {
+    router.back();
+  }, [router]);
 
   const [plantInfo, setPlantInfo] = useState<PlantInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -240,41 +245,54 @@ export default function PlantInfoScreen() {
       logNotes,
     ].filter(Boolean).join('. ');
 
+    const fallbackInfo: PlantInfo = {
+      careInstructions: [
+        'Water when the top inch of soil feels dry',
+        'Provide bright, indirect sunlight for best growth',
+        'Maintain humidity above 50% if possible',
+        'Fertilize monthly during the growing season',
+        'Wipe leaves regularly to remove dust',
+      ],
+      about: `${plant.name} (${plant.species}) is a popular houseplant known for its beautiful foliage. It thrives in indoor conditions and is a wonderful addition to any plant collection.`,
+      feedbackSummary: userFeedback || '',
+    };
+
+    let cancelled = false;
+    setIsLoading(true);
+    setError(null);
+
     const fetchPlantInfo = async () => {
-      const fallbackInfo: PlantInfo = {
-        careInstructions: [
-          'Water when top inch of soil feels dry',
-          'Provide bright, indirect sunlight for best growth',
-          'Maintain humidity above 50% if possible',
-          'Fertilize monthly during growing season',
-          'Wipe leaves regularly to remove dust',
-        ],
-        about: `${plant.name} (${plant.species}) is a popular houseplant known for its beautiful foliage. It thrives in indoor conditions and is a wonderful addition to any plant collection.`,
-        feedbackSummary: userFeedback || 'No user observations recorded yet.',
-      };
-
       try {
-        console.log('Fetching plant info for:', plant.name, plant.species);
-
-        setPlantInfo(fallbackInfo);
+        const guide = await generateCareGuide(plant.name, plant.species, userFeedback);
+        if (cancelled) return;
+        setPlantInfo({
+          careInstructions: guide.careInstructions.length >= 3 ? guide.careInstructions : fallbackInfo.careInstructions,
+          about: guide.about || fallbackInfo.about,
+          feedbackSummary: guide.feedbackSummary || userFeedback || '',
+        });
         setError(null);
-        Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
       } catch (e) {
+        if (cancelled) return;
         console.log('Error fetching plant info:', e);
-        setError('Could not load plant details. Please try again.');
         setPlantInfo(fallbackInfo);
+        setError('Showing general care tips — AI guide is temporarily unavailable.');
       } finally {
+        if (cancelled) return;
         setIsLoading(false);
+        Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
       }
     };
 
     fetchPlantInfo();
+    return () => {
+      cancelled = true;
+    };
   }, [plant?.id]);
 
   if (!plant) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Stack.Screen options={{ title: 'Plant Info' }} />
+        <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.emptyState}>
           <Leaf size={48} color={colors.textTertiary} strokeWidth={1.5} />
           <Text style={[styles.emptyText, { color: colors.textTertiary }]}>Plant not found</Text>
@@ -285,14 +303,32 @@ export default function PlantInfoScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen
-        options={{
-          title: `${plant.name} Info`,
-          headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.text,
-          headerTitleStyle: { fontWeight: '600' as const, fontSize: 17, color: colors.text },
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
+
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: insets.top + 6,
+            backgroundColor: colors.background,
+            borderBottomColor: colors.divider,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          onPress={handleBack}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.backButton}
+          activeOpacity={0.6}
+        >
+          <ChevronLeft size={26} color={colors.primary} strokeWidth={2} />
+          <Text style={[styles.backText, { color: colors.primary }]} numberOfLines={1}>{plant.name}</Text>
+        </TouchableOpacity>
+
+        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>Plant Info</Text>
+
+        <View style={styles.headerSpacer} />
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -327,6 +363,33 @@ export default function PlantInfoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingBottom: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  backButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    width: 120,
+  },
+  backText: {
+    fontSize: 17,
+    fontWeight: '400' as const,
+    marginLeft: -2,
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center' as const,
+    fontSize: 17,
+    fontWeight: '600' as const,
+  },
+  headerSpacer: {
+    width: 120,
   },
   scrollContent: {
     padding: 20,

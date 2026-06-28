@@ -2,7 +2,8 @@ import React, { useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { Droplets, Info, Calendar, Leaf, Trash2 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Droplets, Info, Calendar, Leaf, Trash2, ChevronLeft } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { usePlants } from '@/providers/PlantProvider';
 import { useSettings } from '@/providers/SettingsProvider';
@@ -18,6 +19,7 @@ import { Alert } from 'react-native';
 export default function PlantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useSettings();
   const { plants, waterPlant, addCommunityPost, removePlant } = usePlants();
   const plant = plants.find((p) => p.id === id);
@@ -61,6 +63,29 @@ export default function PlantDetailScreen() {
     setLastWatered(null);
   }, [lastWatered, addCommunityPost]);
 
+  const handleRemove = useCallback(() => {
+    if (!plant) return;
+    Alert.alert(
+      'Remove Plant',
+      `Are you sure you want to remove ${plant.name} from your collection?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removePlant(plant.id);
+              router.back();
+            } catch (e) {
+              console.log('Error removing plant:', e);
+            }
+          },
+        },
+      ]
+    );
+  }, [plant, removePlant, router]);
+
   if (!plant) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -84,52 +109,49 @@ export default function PlantDetailScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen
-        options={{
-          title: plant.name,
-          headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.text,
-          headerTitleStyle: { fontWeight: '600' as const, fontSize: 17, color: colors.text },
-          headerRight: () => (
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                onPress={() => router.push({ pathname: '/plants/info', params: { id: plant.id } } as never)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                style={styles.infoButton}
-              >
-                <Info size={22} color={colors.waterBlue} strokeWidth={1.8} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  Alert.alert(
-                    'Remove Plant',
-                    `Are you sure you want to remove ${plant.name} from your collection?`,
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      {
-                        text: 'Remove',
-                        style: 'destructive',
-                        onPress: async () => {
-                          try {
-                            await removePlant(plant.id);
-                            router.back();
-                          } catch (e) {
-                            console.log('Error removing plant:', e);
-                          }
-                        },
-                      },
-                    ]
-                  );
-                }}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                style={styles.infoButton}
-              >
-                <Trash2 size={20} color={colors.error} strokeWidth={1.8} />
-              </TouchableOpacity>
-            </View>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
+
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: insets.top + 6,
+            backgroundColor: colors.background,
+            borderBottomColor: colors.divider,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.backButton}
+          activeOpacity={0.6}
+        >
+          <ChevronLeft size={26} color={colors.primary} strokeWidth={2} />
+          <Text style={[styles.backText, { color: colors.primary }]} numberOfLines={1}>My Plants</Text>
+        </TouchableOpacity>
+
+        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>{plant.name}</Text>
+
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => router.push({ pathname: '/plants/info', params: { id: plant.id } } as never)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.iconButton}
+            activeOpacity={0.6}
+          >
+            <Info size={22} color={colors.waterBlue} strokeWidth={1.8} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleRemove}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.iconButton}
+            activeOpacity={0.6}
+          >
+            <Trash2 size={20} color={colors.error} strokeWidth={1.8} />
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -328,12 +350,38 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600' as const,
   },
+  header: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingBottom: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  backButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    width: 110,
+  },
+  backText: {
+    fontSize: 17,
+    fontWeight: '400' as const,
+    marginLeft: -2,
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center' as const,
+    fontSize: 17,
+    fontWeight: '600' as const,
+  },
   headerActions: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    gap: 16,
+    justifyContent: 'flex-end' as const,
+    width: 110,
+    gap: 14,
   },
-  infoButton: {
+  iconButton: {
     padding: 4,
   },
   emptyState: {
