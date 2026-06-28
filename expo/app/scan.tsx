@@ -19,160 +19,12 @@ import { Camera, ImageIcon, X, ScanLine, Search, Leaf } from 'lucide-react-nativ
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
 import { useSettings } from '@/providers/SettingsProvider';
-
-const GEMINI_API_KEY = process.env.EXPO_PUBLIC_Plantual || '';
-const GEMINI_MODEL = 'gemini-2.5-flash';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-
-const PROMPT = `You are an expert botanist. Identify the plant in the photo. Return STRICT JSON only with these fields:
-{
-  "commonName": string | null,
-  "scientificName": string | null,
-  "confidence": number (0 to 1, e.g. 0.85),
-  "notes": string (brief care tips or interesting facts, 1-2 sentences),
-  "possibleMatches": [{"commonName": string, "scientificName": string, "confidence": number}]
-}
-Rules:
-- possibleMatches should contain up to 3 alternative identifications sorted by confidence descending
-- If you cannot identify the plant, set commonName and scientificName to null and confidence to a low value
-- Do NOT include markdown code fences or any text outside the JSON object
-- confidence values must be between 0 and 1`;
-
-const SEARCH_PROMPT = `You are an expert botanist. The user is searching for a plant by name: "{QUERY}".
-Return a JSON array of up to 5 matching plants. Each entry should have:
-{
-  "commonName": string,
-  "scientificName": string,
-  "description": string (1-2 sentence description),
-  "imageKeyword": string (a keyword for finding images of this plant)
-}
-Rules:
-- Return STRICT JSON array only, no markdown fences or extra text
-- If no plants match, return an empty array []
-- Include common houseplants, garden plants, and tropical plants
-- Order by relevance to the search query`;
-
-interface GeminiResult {
-  commonName: string | null;
-  scientificName: string | null;
-  confidence: number;
-  notes: string;
-  possibleMatches: { commonName: string; scientificName: string; confidence: number }[];
-}
-
-interface SearchResult {
-  commonName: string;
-  scientificName: string;
-  description: string;
-  imageKeyword: string;
-}
-
-async function callGeminiDirect(imageBase64: string): Promise<GeminiResult> {
-  const MAX_RETRIES = 3;
-  const BASE_DELAYS = [2000, 4000, 8000];
-
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    if (attempt > 0) {
-      const jitter = Math.random() * 1000 - 500;
-      const delay = BASE_DELAYS[attempt - 1] + jitter;
-      console.log(`[Gemini] Retry ${attempt}/${MAX_RETRIES}, waiting ${Math.round(delay)}ms...`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-
-    try {
-      console.log(`[Gemini] Attempt ${attempt + 1}/${MAX_RETRIES + 1}`);
-      const url = `${GEMINI_URL}?key=${GEMINI_API_KEY}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: PROMPT }, { inline_data: { mime_type: 'image/jpeg', data: imageBase64 } }] }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
-        }),
-      });
-
-      console.log(`[Gemini] Response status: ${response.status}`);
-      if (response.status === 429 || response.status === 503) {
-        if (attempt < MAX_RETRIES) continue;
-        throw new Error(response.status === 429 ? 'Too many scans right now. Please wait a moment and try again.' : 'The identification service is busy. Please try again shortly.');
-      }
-
-      const rawText = await response.text();
-      if (rawText.startsWith('<')) throw new Error('Server error. Please try again.');
-      if (!response.ok) throw new Error(`Gemini API error ${response.status}: ${rawText.substring(0, 200)}`);
-
-      let data;
-      try { data = JSON.parse(rawText); } catch { throw new Error('Server error. Please try again.'); }
-
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const parsed = parseGeminiResponse(text);
-
-      return {
-        commonName: parsed.commonName ?? null,
-        scientificName: parsed.scientificName ?? null,
-        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
-        notes: parsed.notes ?? '',
-        possibleMatches: Array.isArray(parsed.possibleMatches)
-          ? parsed.possibleMatches.slice(0, 3).map((m: any) => ({
-              commonName: m.commonName ?? 'Unknown',
-              scientificName: m.scientificName ?? 'Unknown',
-              confidence: typeof m.confidence === 'number' ? m.confidence : 0,
-            }))
-          : [],
-      };
-    } catch (e: any) {
-      if (attempt < MAX_RETRIES && (e?.message?.includes('429') || e?.message?.includes('503'))) continue;
-      if (attempt >= MAX_RETRIES) throw e;
-      throw e;
-    }
-  }
-  throw new Error('Failed after all retries');
-}
-
-async function searchPlantByName(query: string): Promise<SearchResult[]> {
-  if (!GEMINI_API_KEY) throw new Error('API key not configured');
-  const url = `${GEMINI_URL}?key=${GEMINI_API_KEY}`;
-  const prompt = SEARCH_PROMPT.replace('{QUERY}', query);
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
-    }),
-  });
-
-  if (!response.ok) {
-    const raw = await response.text();
-    console.log('[Search] Error:', response.status, raw.substring(0, 200));
-    throw new Error('Search failed. Please try again.');
-  }
-
-  const data = await response.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-  const cleaned = text.trim().replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, '').trim();
-
-  try {
-    const results = JSON.parse(cleaned);
-    return Array.isArray(results) ? results.slice(0, 5) : [];
-  } catch {
-    const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
-    if (jsonMatch) return JSON.parse(jsonMatch[0]).slice(0, 5);
-    return [];
-  }
-}
-
-function parseGeminiResponse(text: string) {
-  let cleaned = text.trim();
-  if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, '');
-  cleaned = cleaned.trim();
-  try { return JSON.parse(cleaned); } catch {
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (jsonMatch) return JSON.parse(jsonMatch[0]);
-    throw new Error('Plant not recognized. Try better lighting or a closer photo.');
-  }
-}
+import {
+  identifyPlantFromImage,
+  searchPlantsByName,
+  fetchPlantImage,
+  PlantSearchResult,
+} from '@/lib/plantAI';
 
 function fileToBase64Web(file: File): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
@@ -196,12 +48,12 @@ export default function ScanScreen() {
   const [mode, setMode] = useState<ScanMode>('scan');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchResults, setSearchResults] = useState<PlantSearchResult[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   const identifyMutation = useMutation({
-    mutationFn: (base64: string) => callGeminiDirect(base64),
+    mutationFn: (base64: string) => identifyPlantFromImage(base64),
     onSuccess: (data) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace({
@@ -212,6 +64,8 @@ export default function ScanScreen() {
           confidence: String(Math.round(data.confidence * 100)),
           notes: data.notes ?? '',
           possibleMatches: JSON.stringify(data.possibleMatches ?? []),
+          needs: JSON.stringify(data.needs),
+          wateringFrequencyDays: String(data.wateringFrequencyDays),
           imageUri: imageUri ?? '',
         },
       });
@@ -223,7 +77,7 @@ export default function ScanScreen() {
   });
 
   const searchMutation = useMutation({
-    mutationFn: (query: string) => searchPlantByName(query),
+    mutationFn: (query: string) => searchPlantsByName(query),
     onSuccess: (data) => {
       console.log('[Search] Found', data.length, 'results');
       setSearchResults(data);
@@ -233,9 +87,33 @@ export default function ScanScreen() {
     },
   });
 
+  const selectMutation = useMutation({
+    mutationFn: async (result: PlantSearchResult) => {
+      const image = await fetchPlantImage(result.scientificName, result.commonName);
+      return { result, image };
+    },
+    onSuccess: ({ result, image }) => {
+      router.replace({
+        pathname: '/scan-result' as never,
+        params: {
+          name: result.commonName,
+          species: result.scientificName,
+          confidence: '90',
+          notes: result.description,
+          possibleMatches: '[]',
+          needs: JSON.stringify(result.needs),
+          wateringFrequencyDays: String(result.wateringFrequencyDays),
+          imageUri: image,
+        },
+      });
+    },
+    onError: () => {
+      Alert.alert('Error', 'Could not open that plant. Please try again.');
+    },
+  });
+
   const startIdentification = useCallback((base64Data: string) => {
     if (!base64Data || base64Data.length < 100) { Alert.alert('Error', 'Image data is too small or empty.'); return; }
-    if (!GEMINI_API_KEY) { Alert.alert('Error', 'API key is not configured.'); return; }
     identifyMutation.mutate(base64Data);
   }, [identifyMutation]);
 
@@ -305,20 +183,10 @@ export default function ScanScreen() {
     searchMutation.mutate(q);
   }, [searchQuery, searchMutation]);
 
-  const handleSelectResult = useCallback((result: SearchResult) => {
+  const handleSelectResult = useCallback((result: PlantSearchResult) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.replace({
-      pathname: '/scan-result' as never,
-      params: {
-        name: result.commonName,
-        species: result.scientificName,
-        confidence: '90',
-        notes: result.description,
-        possibleMatches: '[]',
-        imageUri: `https://picsum.photos/seed/${encodeURIComponent(result.imageKeyword)}/400/400`,
-      },
-    });
-  }, [router]);
+    selectMutation.mutate(result);
+  }, [selectMutation]);
 
   const handleModeChange = useCallback((m: ScanMode) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -328,10 +196,12 @@ export default function ScanScreen() {
     setImageUri(null);
     identifyMutation.reset();
     searchMutation.reset();
-  }, [identifyMutation, searchMutation]);
+    selectMutation.reset();
+  }, [identifyMutation, searchMutation, selectMutation]);
 
   const isScanning = identifyMutation.isPending;
   const isSearching = searchMutation.isPending;
+  const isSelecting = selectMutation.isPending;
 
   const renderWebFileInputs = () => {
     if (Platform.OS !== 'web') return null;
@@ -467,8 +337,9 @@ export default function ScanScreen() {
                 {searchResults.map((result, i) => (
                   <TouchableOpacity
                     key={`${result.scientificName}-${i}`}
-                    style={[styles.resultCard, { backgroundColor: colors.cardSolid, borderColor: colors.divider }]}
+                    style={[styles.resultCard, { backgroundColor: colors.cardSolid, borderColor: colors.divider }, isSelecting && styles.searchBtnDisabled]}
                     onPress={() => handleSelectResult(result)}
+                    disabled={isSelecting}
                     activeOpacity={0.7}
                   >
                     <View style={[styles.resultIconWrap, { backgroundColor: colors.primaryMuted }]}>
@@ -495,6 +366,15 @@ export default function ScanScreen() {
                 <Text style={[styles.searchEmptyText, { color: colors.textSecondary }]}>Type a plant name and tap Go to find it</Text>
               </View>
             )}
+          </View>
+        )}
+
+        {isSelecting && (
+          <View style={styles.selectingOverlay}>
+            <View style={[styles.selectingCard, { backgroundColor: colors.cardSolid }]}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={[styles.scanningText, { color: colors.text }]}>Loading plant…</Text>
+            </View>
           </View>
         )}
 
@@ -556,4 +436,6 @@ const styles = StyleSheet.create({
   searchEmptyTitle: { fontSize: 20, fontWeight: '600' as const },
   searchEmptyText: { fontSize: 14, textAlign: 'center' },
   hiddenInputs: { position: 'absolute', width: 0, height: 0, overflow: 'hidden' },
+  selectingOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.25)' },
+  selectingCard: { paddingHorizontal: 32, paddingVertical: 28, borderRadius: 20, alignItems: 'center', gap: 12 },
 });

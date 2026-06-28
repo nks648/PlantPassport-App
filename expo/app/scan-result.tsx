@@ -16,7 +16,17 @@ import * as Haptics from 'expo-haptics';
 import { Plus, ArrowLeft, Leaf, RefreshCw, Check, Info } from 'lucide-react-native';
 import { usePlants } from '@/providers/PlantProvider';
 import { useSettings } from '@/providers/SettingsProvider';
-import { Plant } from '@/types/plant';
+import { Plant, PlantNeeds } from '@/types/plant';
+import PlantNeedsCard from '@/components/PlantNeedsCard';
+
+const DEFAULT_NEEDS: PlantNeeds = {
+  water: 3,
+  light: 3,
+  humidity: 3,
+  idealTempMin: 60,
+  idealTempMax: 80,
+  easeOfCare: 3,
+};
 
 interface PossibleMatch {
   commonName: string;
@@ -104,6 +114,8 @@ export default function ScanResultScreen() {
     confidence: string;
     notes: string;
     possibleMatches: string;
+    needs: string;
+    wateringFrequencyDays: string;
     imageUri: string;
   }>();
   const { addPlant, plants } = usePlants();
@@ -120,6 +132,14 @@ export default function ScanResultScreen() {
 
   const confidence = parseInt(params.confidence || '0', 10);
   const notes = params.notes || '';
+
+  let needs: PlantNeeds = DEFAULT_NEEDS;
+  try {
+    if (params.needs) needs = { ...DEFAULT_NEEDS, ...JSON.parse(params.needs) };
+  } catch {
+    console.log('[ScanResult] Failed to parse needs');
+  }
+  const wateringFrequencyDays = parseInt(params.wateringFrequencyDays || '3', 10) || 3;
 
   let possibleMatches: PossibleMatch[] = [];
   try {
@@ -152,15 +172,8 @@ export default function ScanResultScreen() {
         lastWatered: new Date().toISOString().split('T')[0],
         addedDate: new Date().toISOString().split('T')[0],
         notes: notes ? [notes] : [],
-        needs: {
-          water: 3,
-          light: 3,
-          humidity: 3,
-          idealTempMin: 60,
-          idealTempMax: 80,
-          easeOfCare: 3,
-        },
-        wateringFrequencyDays: 3,
+        needs,
+        wateringFrequencyDays,
       };
 
       await addPlant(newPlant);
@@ -173,7 +186,7 @@ export default function ScanResultScreen() {
       console.log('[ScanResult] Error adding plant:', e);
       Alert.alert('Error', 'Failed to add plant. Please try again.');
     }
-  }, [params, plants, addPlant, router, displayImage, notes]);
+  }, [params, plants, addPlant, router, displayImage, notes, needs, wateringFrequencyDays]);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -235,6 +248,12 @@ export default function ScanResultScreen() {
             ) : null}
           </Animated.View>
 
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+            <View style={styles.careCardWrap}>
+              <PlantNeedsCard needs={needs} />
+            </View>
+          </Animated.View>
+
           <View style={styles.scanAgainContainer}>
             <TouchableOpacity style={[styles.scanAgainButton, { backgroundColor: colors.cardSolid, borderColor: colors.divider }]} onPress={handleScanAgain} activeOpacity={0.8}>
               <RefreshCw size={18} color={colors.primary} strokeWidth={2} />
@@ -290,6 +309,7 @@ const styles = StyleSheet.create({
   matchName: { fontSize: 14, fontWeight: '600' as const },
   matchSpecies: { fontSize: 12, fontStyle: 'italic' as const },
   matchConfidence: { fontSize: 14, fontWeight: '600' as const },
+  careCardWrap: { paddingHorizontal: 16, marginTop: 16 },
   scanAgainContainer: { paddingHorizontal: 16, marginTop: 16 },
   scanAgainButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1 },
   scanAgainText: { fontSize: 16, fontWeight: '500' as const },
