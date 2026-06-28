@@ -1,8 +1,7 @@
 import { PlantNeeds } from '@/types/plant';
 
-const GEMINI_API_KEY =
-  process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? 'AIzaSyB6O1XYsveU1JyVTEXehgkHBsYjKArh0J4';
-const MODEL = 'gemini-2.0-flash';
+const GEMINI_KEY = process.env.EXPO_PUBLIC_Gemini ?? '';
+const MODEL = 'gemini-2.5-flash';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 export interface PlantIdentification {
@@ -118,11 +117,11 @@ type GeminiPart =
   | { inline_data: { mime_type: string; data: string } };
 
 /**
- * Call Google Gemini directly with structured JSON output. Using the REST API
- * keeps latency low (no proxy hop) and returns parseable JSON via responseMimeType.
+ * Call Google Gemini directly (generateContent) with a vision-capable model.
+ * The API key is read from the EXPO_PUBLIC_Gemini secret.
  */
-async function callGemini(parts: GeminiPart[], maxRetries = 2): Promise<string> {
-  if (!GEMINI_API_KEY) {
+async function callModel(parts: GeminiPart[], maxRetries = 2): Promise<string> {
+  if (!GEMINI_KEY) {
     throw new Error('AI service is not configured.');
   }
   const baseDelays = [1000, 2500];
@@ -132,14 +131,17 @@ async function callGemini(parts: GeminiPart[], maxRetries = 2): Promise<string> 
       await new Promise((r) => setTimeout(r, baseDelays[attempt - 1] + Math.random() * 400));
     }
     try {
-      const response = await fetch(`${ENDPOINT}?key=${GEMINI_API_KEY}`, {
+      const response = await fetch(ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': GEMINI_KEY,
+        },
         body: JSON.stringify({
           contents: [{ role: 'user', parts }],
           generationConfig: {
             temperature: 0.2,
-            maxOutputTokens: 1200,
+            maxOutputTokens: 2048,
             responseMimeType: 'application/json',
           },
         }),
@@ -166,14 +168,13 @@ async function callGemini(parts: GeminiPart[], maxRetries = 2): Promise<string> 
       } catch {
         throw new Error('Unexpected response. Please try again.');
       }
-      const content = data?.candidates?.[0]?.content?.parts
-        ?.map((p: any) => (typeof p?.text === 'string' ? p.text : ''))
-        .join('')
-        .trim();
-      if (typeof content !== 'string' || content.length === 0) {
+      const candidate = data?.candidates?.[0];
+      const text = candidate?.content?.parts?.map((p: any) => p?.text ?? '').join('') ?? '';
+      const result = typeof text === 'string' ? text.trim() : '';
+      if (result.length === 0) {
         throw new Error('No result returned. Please try again.');
       }
-      return content;
+      return result;
     } catch (e: any) {
       const msg = e?.message ?? '';
       const transient = msg.includes('busy') || msg.includes('unavailable') || msg.includes('Network');
@@ -190,7 +191,7 @@ export async function identifyPlantFromImage(imageBase64: string): Promise<Plant
     ? imageBase64.split(',')[1] ?? imageBase64
     : imageBase64;
 
-  const content = await callGemini([
+  const content = await callModel([
     { text: IDENTIFY_PROMPT },
     { inline_data: { mime_type: 'image/jpeg', data: base64 } },
   ]);
@@ -217,7 +218,7 @@ export async function identifyPlantFromImage(imageBase64: string): Promise<Plant
 
 /** Search for plants by name, returning each plant's species-specific care profile. */
 export async function searchPlantsByName(query: string): Promise<PlantSearchResult[]> {
-  const content = await callGemini([{ text: SEARCH_PROMPT.replace('{QUERY}', query) }]);
+  const content = await callModel([{ text: SEARCH_PROMPT.replace('{QUERY}', query) }]);
 
   const parsed = extractJSON(content);
   const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.plants) ? parsed.plants : [];
