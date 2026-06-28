@@ -11,7 +11,7 @@ export const PLANT_IMAGES: Record<string, string> = {
 
 export const DEFAULT_USER_PROFILE: UserProfile = {
   name: 'Plant Parent',
-  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
+  avatar: '',
   xp: 320,
   rank: 'Sprout',
   badges: ['First Watering', 'Week Warrior'],
@@ -127,8 +127,8 @@ export const MOCK_COMMUNITY: CommunityPost[] = [
   {
     id: 'c1',
     userId: 'u1',
-    userName: 'Emma Green',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
+    userName: 'MonsteraMom',
+    avatar: '',
     text: 'My Monstera just unfurled its biggest leaf yet! 🌿 30 days of consistent care pays off.',
     plantName: 'Monstera',
     streak: 30,
@@ -140,8 +140,8 @@ export const MOCK_COMMUNITY: CommunityPost[] = [
   {
     id: 'c2',
     userId: 'u2',
-    userName: 'Marcus Rivera',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
+    userName: 'LeafLord',
+    avatar: '',
     text: 'Finally figured out the watering schedule for my Fiddle Leaf. No more brown spots!',
     plantName: 'Fiddle Leaf Fig',
     streak: 14,
@@ -153,8 +153,8 @@ export const MOCK_COMMUNITY: CommunityPost[] = [
   {
     id: 'c3',
     userId: 'u3',
-    userName: 'Aisha Patel',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
+    userName: 'PlantWhisperer',
+    avatar: '',
     text: 'Propagated my Pothos and now I have 12 plants from one! Who wants a cutting? 🪴',
     plantName: 'Pothos',
     streak: 45,
@@ -166,8 +166,8 @@ export const MOCK_COMMUNITY: CommunityPost[] = [
   {
     id: 'c4',
     userId: 'u4',
-    userName: 'Tom Nakamura',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
+    userName: 'JungleVibes',
+    avatar: '',
     text: 'Started my plant journey last month. Already addicted! My Snake Plant is thriving.',
     plantName: 'Snake Plant',
     streak: 21,
@@ -179,8 +179,8 @@ export const MOCK_COMMUNITY: CommunityPost[] = [
   {
     id: 'c5',
     userId: 'u5',
-    userName: 'Sofia Chen',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop',
+    userName: 'BloomBuddy',
+    avatar: '',
     text: 'Peace Lily in full bloom today! There is nothing like seeing your plant babies thrive 🌸',
     plantName: 'Peace Lily',
     streak: 18,
@@ -192,16 +192,16 @@ export const MOCK_COMMUNITY: CommunityPost[] = [
 ];
 
 export const MOCK_LEADERBOARD: LeaderboardEntry[] = [
-  { id: 'l1', rank: 1, userName: 'Aisha Patel', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop', streak: 45, totalPlants: 12, isCurrentUser: false, weeklyStreak: 7 },
-  { id: 'l2', rank: 2, userName: 'Emma Green', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop', streak: 38, totalPlants: 8, isCurrentUser: false, weeklyStreak: 7 },
-  { id: 'l3', rank: 3, userName: 'Pothos King', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop', streak: 35, totalPlants: 15, isCurrentUser: false, weeklyStreak: 6 },
-  { id: 'l4', rank: 4, userName: 'You', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop', streak: 30, totalPlants: 6, isCurrentUser: true, weeklyStreak: 5 },
-  { id: 'l5', rank: 5, userName: 'Tom Nakamura', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop', streak: 28, totalPlants: 4, isCurrentUser: false, weeklyStreak: 5 },
-  { id: 'l6', rank: 6, userName: 'Sofia Chen', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop', streak: 25, totalPlants: 7, isCurrentUser: false, weeklyStreak: 4 },
-  { id: 'l7', rank: 7, userName: 'Marcus Rivera', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop', streak: 21, totalPlants: 3, isCurrentUser: false, weeklyStreak: 4 },
-  { id: 'l8', rank: 8, userName: 'Lily Waters', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop', streak: 18, totalPlants: 5, isCurrentUser: false, weeklyStreak: 3 },
-  { id: 'l9', rank: 9, userName: 'James Park', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop', streak: 15, totalPlants: 9, isCurrentUser: false, weeklyStreak: 3 },
-  { id: 'l10', rank: 10, userName: 'Priya Sharma', avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=100&h=100&fit=crop', streak: 12, totalPlants: 6, isCurrentUser: false, weeklyStreak: 2 },
+  { id: 'l1', rank: 1, userName: 'PlantWhisperer', avatar: '', streak: 45, totalPlants: 12, isCurrentUser: false, weeklyStreak: 7 },
+  { id: 'l2', rank: 2, userName: 'MonsteraMom', avatar: '', streak: 38, totalPlants: 8, isCurrentUser: false, weeklyStreak: 7 },
+  { id: 'l3', rank: 3, userName: 'PothosKing', avatar: '', streak: 35, totalPlants: 15, isCurrentUser: false, weeklyStreak: 6 },
+  { id: 'l4', rank: 4, userName: 'You', avatar: '', streak: 30, totalPlants: 6, isCurrentUser: true, weeklyStreak: 5 },
+  { id: 'l5', rank: 5, userName: 'JungleVibes', avatar: '', streak: 28, totalPlants: 4, isCurrentUser: false, weeklyStreak: 5 },
+  { id: 'l6', rank: 6, userName: 'BloomBuddy', avatar: '', streak: 25, totalPlants: 7, isCurrentUser: false, weeklyStreak: 4 },
+  { id: 'l7', rank: 7, userName: 'LeafLord', avatar: '', streak: 21, totalPlants: 3, isCurrentUser: false, weeklyStreak: 4 },
+  { id: 'l8', rank: 8, userName: 'Fernatic', avatar: '', streak: 18, totalPlants: 5, isCurrentUser: false, weeklyStreak: 3 },
+  { id: 'l9', rank: 9, userName: 'CactusKing', avatar: '', streak: 15, totalPlants: 9, isCurrentUser: false, weeklyStreak: 3 },
+  { id: 'l10', rank: 10, userName: 'SuccaForPlants', avatar: '', streak: 12, totalPlants: 6, isCurrentUser: false, weeklyStreak: 2 },
 ];
 
 export const WATERING_CHART_DATA = [

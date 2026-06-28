@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Send, X, Trophy, Flame, Leaf, Users } from 'lucide-react-native';
+import { Send, X, Trophy, Flame, Leaf, Users, UserCircle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { usePlants } from '@/providers/PlantProvider';
 import { useSettings } from '@/providers/SettingsProvider';
@@ -146,7 +146,13 @@ export default function CommunityScreen() {
               return (
                 <View key={entry.id} style={[styles.podiumItem, isFirst && styles.podiumFirst]}>
                   <View style={[styles.medalCircle, { borderColor: medalColors[idx] }]}>
-                    <Image source={{ uri: entry.avatar }} style={[styles.podiumAvatar, { backgroundColor: colors.divider }]} />
+                    {entry.avatar ? (
+                      <Image source={{ uri: entry.avatar }} style={[styles.podiumAvatar, { backgroundColor: colors.divider }]} />
+                    ) : (
+                      <View style={[styles.podiumAvatar, styles.podiumAvatarPlaceholder, { backgroundColor: colors.primaryMuted }]}>
+                        <Leaf size={22} color={colors.primary} strokeWidth={1.5} />
+                      </View>
+                    )}
                     <View style={[styles.rankBadge, { backgroundColor: medalColors[idx] }]}>
                       <Text style={styles.rankBadgeText}>{entry.rank}</Text>
                     </View>
@@ -169,7 +175,13 @@ export default function CommunityScreen() {
               <Text style={[styles.rank, { color: colors.textSecondary }, entry.isCurrentUser && { color: colors.primary }]}>
                 {entry.rank}
               </Text>
-              <Image source={{ uri: entry.avatar }} style={[styles.listAvatar, { backgroundColor: colors.divider }]} />
+              {entry.avatar ? (
+                <Image source={{ uri: entry.avatar }} style={[styles.listAvatar, { backgroundColor: colors.divider }]} />
+              ) : (
+                <View style={[styles.listAvatar, styles.listAvatarPlaceholder, { backgroundColor: colors.primaryMuted }]}>
+                  <Leaf size={16} color={colors.primary} strokeWidth={1.5} />
+                </View>
+              )}
               <View style={styles.listInfo}>
                 <Text style={[styles.listName, { color: colors.text }, entry.isCurrentUser && { color: colors.primary, fontWeight: '600' as const }]}>
                   {entry.userName}
@@ -196,7 +208,13 @@ export default function CommunityScreen() {
               </View>
               <GlassCard style={[styles.listItem, { backgroundColor: 'rgba(48, 209, 88, 0.04)', borderColor: 'rgba(48, 209, 88, 0.15)', borderWidth: 1 }]}>
                 <Text style={[styles.rank, { color: colors.primary }]}>{currentUser.rank}</Text>
-                <Image source={{ uri: currentUser.avatar }} style={[styles.listAvatar, { backgroundColor: colors.divider }]} />
+                {currentUser.avatar ? (
+                  <Image source={{ uri: currentUser.avatar }} style={[styles.listAvatar, { backgroundColor: colors.divider }]} />
+                ) : (
+                  <View style={[styles.listAvatar, styles.listAvatarPlaceholder, { backgroundColor: colors.primaryMuted }]}>
+                    <Leaf size={16} color={colors.primary} strokeWidth={1.5} />
+                  </View>
+                )}
                 <View style={styles.listInfo}>
                   <Text style={[styles.listName, { color: colors.primary, fontWeight: '600' as const }]}>
                     {currentUser.userName} (You)
@@ -478,6 +496,10 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
   },
+  podiumAvatarPlaceholder: {
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
   rankBadge: {
     position: 'absolute',
     bottom: -4,
@@ -526,6 +548,10 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     marginLeft: 8,
+  },
+  listAvatarPlaceholder: {
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   listInfo: {
     flex: 1,

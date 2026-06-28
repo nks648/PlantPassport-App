@@ -234,6 +234,15 @@ export const [PlantProvider, usePlants] = createContextHook(() => {
           await AsyncStorage.setItem(SYNC_FLAG_KEY, '1');
         }
 
+        // If the user has a profile picture from their auth provider and our
+        // local profile doesn't have one set, sync it in automatically.
+        if (user.picture && !userProfile.avatar) {
+          const profileWithPic = { ...userProfile, avatar: user.picture };
+          setUserProfile(profileWithPic);
+          await AsyncStorage.setItem(STORAGE_KEYS.userProfile, JSON.stringify(profileWithPic));
+          cloudUpsertProfile(profileWithPic, user.id, user.email).catch(() => {});
+        }
+
         // Sync community posts from cloud (always refresh on auth)
         try {
           const cloudPosts = await cloudFetchCommunityPosts();
@@ -446,8 +455,8 @@ export const [PlantProvider, usePlants] = createContextHook(() => {
     const newPost: CommunityPost = {
       id: `c${now}`,
       userId: user?.id ?? 'current',
-      userName: user?.name ?? 'You',
-      avatar: user?.picture ?? userProfile.avatar,
+      userName: userProfile.name || 'Plant Parent',
+      avatar: userProfile.avatar || '',
       text,
       plantName,
       streak,
@@ -478,7 +487,7 @@ export const [PlantProvider, usePlants] = createContextHook(() => {
     }
 
     console.log('+20 XP for community post');
-  }, [communityPosts, userProfile, user, isAuthenticated, persistProfile]);
+  }, [communityPosts, userProfile, isAuthenticated, persistProfile]);
 
   // ── Remove plant mutation ─────────────────────────────────────────────────
 

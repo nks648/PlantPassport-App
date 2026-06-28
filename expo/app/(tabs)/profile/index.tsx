@@ -275,7 +275,13 @@ export default function ProfileScreen() {
         <GlassCard style={styles.profileCard}>
           <View style={styles.profileHeader}>
             <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.8} style={styles.avatarContainer}>
-              <Image source={{ uri: userProfile.avatar }} style={styles.avatar} />
+              {userProfile.avatar ? (
+                <Image source={{ uri: userProfile.avatar }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: colors.primaryMuted, borderColor: 'rgba(48, 209, 88, 0.2)' }]}>
+                  <Leaf size={28} color={colors.primary} strokeWidth={1.5} />
+                </View>
+              )}
               <View style={[styles.avatarBadge, { backgroundColor: colors.primary, borderColor: colors.cardSolid }]}>
                 <Camera size={12} color="#fff" strokeWidth={2} />
               </View>
@@ -487,6 +493,10 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: 'rgba(48, 209, 88, 0.2)',
   },
+  avatarPlaceholder: {
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
   avatarBadge: {
     position: 'absolute' as const,
     bottom: 0,
@@ -680,6 +690,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
+  },
+  healthPlantPlaceholder: {
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: 'rgba(48, 209, 88, 0.08)',
   },
   healthInfo: {
     flex: 1,

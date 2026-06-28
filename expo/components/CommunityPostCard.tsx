@@ -1,7 +1,7 @@
 import React, { useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Image } from 'expo-image';
-import { Heart, MessageCircle } from 'lucide-react-native';
+import { Heart, MessageCircle, Leaf } from 'lucide-react-native';
 import { useSettings } from '@/providers/SettingsProvider';
 import { CommunityPost } from '@/types/plant';
 import GlassCard from './GlassCard';
@@ -27,7 +27,13 @@ export default React.memo(function CommunityPostCard({ post, onLike }: Community
   return (
     <GlassCard style={styles.card}>
       <View style={styles.header}>
-        <Image source={{ uri: post.avatar }} style={[styles.avatar, { backgroundColor: colors.divider }]} />
+        {post.avatar ? (
+          <Image source={{ uri: post.avatar }} style={[styles.avatar, { backgroundColor: colors.divider }]} />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: colors.primaryMuted }]}>
+            <Leaf size={18} color={colors.primary} strokeWidth={1.5} />
+          </View>
+        )}
         <View style={styles.headerText}>
           <Text style={[styles.userName, { color: colors.text }]}>{post.userName}</Text>
           <Text style={[styles.time, { color: colors.textSecondary }]}>{post.timeAgo}</Text>
@@ -79,6 +85,10 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+  },
+  avatarPlaceholder: {
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   headerText: {
     flex: 1,
